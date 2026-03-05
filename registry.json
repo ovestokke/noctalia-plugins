@@ -843,7 +843,7 @@
     {
       "id": "todo",
       "name": "Todo List",
-      "version": "1.9.6",
+      "version": "1.9.7",
       "official": false,
       "author": "lonerOrz <lonerOrz@qq.com>",
       "description": "A simple todo list manager plugin for Noctalia Shell.",
@@ -856,7 +856,7 @@
         "Panel",
         "Productivity"
       ],
-      "lastUpdated": "2026-03-04T07:35:16+08:00"
+      "lastUpdated": "2026-03-05T08:39:51+07:00"
     },
     {
       "id": "translator",
