@@ -43,7 +43,6 @@ Item {
             WlrLayershell.namespace: "noctalia-mirror"
 
             onVisibleChanged: {
-                // FIX: guard against screen.width === 0 race on first show
                 if (visible && isPrimary && root.xPos === -1 && screen.width > 0) {
                     root.xPos = screen.width  - root.currentWidth  - 24
                     root.yPos = Math.round((screen.height - root.currentHeight) / 2)
@@ -125,7 +124,6 @@ Item {
                 }
 
                 // ── Controls ────────────────────────────
-                // FIX: pill background so controls are always visible regardless of video content
                 Rectangle {
                     anchors.bottom: parent.bottom
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -153,15 +151,13 @@ Item {
                                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
                                 onClicked: {
                                     root.isSquare = !root.isSquare
-                                    // FIX: wide uses 16:9 ratio, square locks to 1:1 — both from current width
                                     root.currentHeight = root.isSquare
                                         ? root.currentWidth
                                         : Math.round(root.currentWidth * 9 / 16)
-                                    // Re-clamp position after size change
                                     root.xPos = Math.max(0, Math.min(win.screen.width  - root.currentWidth,  root.xPos))
                                     root.yPos = Math.max(0, Math.min(win.screen.height - root.currentHeight, root.yPos))
                                 }
-                                onEntered: TooltipService.show(parent, root.isSquare ? (root.pluginApi?.tr("tooltips.switchToWide") ?? "Switch to wide (16:9)") : (root.pluginApi?.tr("tooltips.switchToSquare") ?? "Switch to square"))
+                                onEntered: TooltipService.show(parent, root.isSquare ? root.pluginApi?.tr("tooltips.switchToWide") : root.pluginApi?.tr("tooltips.switchToSquare"))
                                 onExited:  TooltipService.hide()
                             }
                         }
@@ -175,7 +171,7 @@ Item {
                                 id: flipHover
                                 anchors.fill: parent; cursorShape: Qt.PointingHandCursor; hoverEnabled: true
                                 onClicked: root.isFlipped = !root.isFlipped
-                                onEntered: TooltipService.show(parent, root.isFlipped ? (root.pluginApi?.tr("tooltips.unflipcamera") ?? "Unflip camera") : (root.pluginApi?.tr("tooltips.flipCamera") ?? "Flip camera"))
+                                onEntered: TooltipService.show(parent, root.isFlipped ? root.pluginApi?.tr("tooltips.unflipcamera") : root.pluginApi?.tr("tooltips.flipCamera"))
                                 onExited:  TooltipService.hide()
                             }
                         }
@@ -189,7 +185,7 @@ Item {
                                 id: closeHover; anchors.fill: parent
                                 hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onClicked: root.hide()
-                                onEntered: TooltipService.show(parent, root.pluginApi?.tr("pin.close") ?? "Close")
+                                onEntered: TooltipService.show(parent, root.pluginApi?.tr("pin.close"))
                                 onExited:  TooltipService.hide()
                             }
                         }
@@ -198,7 +194,6 @@ Item {
 
                 // ── Resize handles ──────────────────────
                 component ResizeHandle: MouseArea {
-                    // mode: 0=BR  1=BL  2=TR  3=TL
                     property int mode: 0
                     width: 20; height: 20
                     hoverEnabled: true
@@ -224,17 +219,14 @@ Item {
                         var nw = startW
                         var nx = startX; var ny = startY
 
-                        // FIX: clean resize logic — each corner uses correct axis
-                        if      (mode === 0) { nw = Math.max(150, startW + dx) }          // BR: drag right = wider
-                        else if (mode === 1) { nw = Math.max(150, startW - dx); nx = startX + (startW - nw) } // BL: drag left = wider
-                        else if (mode === 2) { nw = Math.max(150, startW + dx) }          // TR: drag right = wider
-                        else if (mode === 3) { nw = Math.max(150, startW - dx); nx = startX + (startW - nw) } // TL: drag left = wider
+                        if      (mode === 0) { nw = Math.max(150, startW + dx) }
+                        else if (mode === 1) { nw = Math.max(150, startW - dx); nx = startX + (startW - nw) }
+                        else if (mode === 2) { nw = Math.max(150, startW + dx) }
+                        else if (mode === 3) { nw = Math.max(150, startW - dx); nx = startX + (startW - nw) }
 
-                        // FIX: height respects aspect ratio — square=1:1, wide=16:9
                         var nh = root.isSquare ? nw : Math.round(nw * 9 / 16)
-                        nh = Math.max(100, nh)  // FIX: minimum height guard
+                        nh = Math.max(100, nh)
 
-                        // FIX: top handles move Y to keep top edge pinned
                         if (mode === 2 || mode === 3) ny = startY + (startH - nh)
 
                         root.currentWidth  = nw

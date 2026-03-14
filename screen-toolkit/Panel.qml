@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Widgets
 import qs.Services.UI
@@ -17,56 +18,70 @@ Item {
 
     anchors.fill: parent
 
-    property var main: null
-
     onPluginApiChanged: {
         if (pluginApi) {
-            Logger.i("ScreenToolkit", "pluginApi set, mainInstance=" + pluginApi.mainInstance)
-            root.main = pluginApi.mainInstance
             var saved = pluginApi.pluginSettings.selectedOcrLang
             if (saved && saved !== "") root.selectedOcrLang = saved
-            if (!root.main) mainRetryTimer.start()
+            mainInstancePoller.start()
         }
     }
 
-    // FIX: added attempt counter — timer no longer retries indefinitely if
-    // mainInstance never becomes available (was an infinite loop risk)
+    property var mainInstance: null
     Timer {
-        id: mainRetryTimer
-        interval: 100
-        repeat: true
-        property int _attempts: 0
+        id: mainInstancePoller
+        interval: 200; repeat: true
         onTriggered: {
-            _attempts++
-            if (_attempts > 50) {
-                Logger.e("ScreenToolkit", "mainInstance never became available after 5s — giving up")
+            if (pluginApi?.mainInstance) {
+                root.mainInstance = pluginApi.mainInstance
                 stop()
-                return
-            }
-            if (pluginApi && pluginApi.mainInstance) {
-                root.main = pluginApi.mainInstance
-                _attempts = 0
-                stop()
+                Logger.i("ScreenToolkit", "mainInstance resolved: " + root.mainInstance)
             }
         }
     }
 
-    Connections {
-        target: pluginApi
-        ignoreUnknownSignals: true
-        function onMainInstanceChanged() {
-            Logger.i("ScreenToolkit", "mainInstance changed: " + pluginApi.mainInstance)
-            root.main = pluginApi.mainInstance
-            if (root.main) mainRetryTimer.stop()
-        }
-    }
-
-    readonly property bool isRunning: main?.isRunning ?? false
-    readonly property string activeTool: main?.activeTool ?? ""
+    readonly property bool isRunning: pluginApi?.pluginSettings?.stateIsRunning ?? false
+    readonly property string activeTool: pluginApi?.pluginSettings?.stateActiveTool ?? ""
+    readonly property bool mirrorActive: pluginApi?.pluginSettings?.stateMirrorVisible ?? false
     readonly property bool hasResult: activeTool !== "" && !isRunning
     onActiveToolChanged: {
         if (activeTool === "ocr" || activeTool === "qr" || activeTool === "colorpicker" || activeTool === "palette")
             root.viewedTool = activeTool
+    }
+
+    // ── Clipboard + translate ────────────────────────────────
+    Process {
+        id: panelClipProc
+    }
+    Process {
+        id: panelTranslateProc
+        property bool isTranslating: false
+        stdout: StdioCollector {}
+        onExited: {
+            isTranslating = false
+            var result = panelTranslateProc.stdout.text.trim()
+            if (pluginApi) {
+                pluginApi.pluginSettings.translateResult = (result !== "")
+                    ? result
+                    : pluginApi.tr("messages.translate-failed")
+                pluginApi.saveSettings()
+            }
+        }
+    }
+
+    function copyToClipboard(text) {
+        if (!text || text === "") return
+        panelClipProc.exec({ command: ["bash", "-c", "printf '%s' " + _shellEscape(text) + " | wl-copy 2>/dev/null"] })
+    }
+
+    function runTranslate(text, targetLang) {
+        if (!text || text === "" || panelTranslateProc.isTranslating) return
+        panelTranslateProc.isTranslating = true
+        if (pluginApi) { pluginApi.pluginSettings.translateResult = ""; pluginApi.saveSettings() }
+        panelTranslateProc.exec({ command: ["bash", "-c", "trans -brief -to " + targetLang + " " + _shellEscape(text)] })
+    }
+
+    function _shellEscape(str) {
+        return "'" + str.replace(/'/g, "'\\''") + "'"
     }
 
     readonly property var installedLangs: pluginApi?.pluginSettings?.installedLangs || ["eng"]
@@ -180,18 +195,18 @@ Item {
     property int focusedTool: 0
     property string viewedTool: ""
 
-    readonly property var toolDefs: [
-        { icon: "color-picker",  label: pluginApi?.tr("tools.colorpicker") ?? "Color",    tool: "colorpicker", tooltip: pluginApi?.tr("tooltips.colorpicker") ?? "Pick a color from screen"              },
-        { icon: "palette",       label: pluginApi?.tr("tools.palette")     ?? "Palette",  tool: "palette",     tooltip: pluginApi?.tr("tooltips.palette")     ?? "Extract dominant colors from a region" },
-        { icon: "scan",          label: pluginApi?.tr("tools.ocr")         ?? "OCR",      tool: "ocr",         tooltip: pluginApi?.tr("tooltips.ocr")         ?? "Extract text from screen"              },
-        { icon: "world-search",  label: pluginApi?.tr("tools.lens")        ?? "Lens",     tool: "lens",        tooltip: pluginApi?.tr("tooltips.lens")        ?? "Search image with Google Lens"         },
-        { icon: "qrcode",        label: pluginApi?.tr("tools.qr")          ?? "QR",       tool: "qr",          tooltip: pluginApi?.tr("tooltips.qr")          ?? "Scan a QR or barcode"                  },
-        { icon: "brush",         label: pluginApi?.tr("tools.annotate")    ?? "Annotate", tool: "annotate",    tooltip: pluginApi?.tr("tooltips.annotate")    ?? "Draw and annotate a region"            },
-        { icon: "video",         label: pluginApi?.tr("tools.record")      ?? "Record",   tool: "record",      tooltip: pluginApi?.tr("tooltips.record")      ?? "Record a screen region as GIF or MP4"  },
-        { icon: "pin",           label: pluginApi?.tr("tools.pin")         ?? "Pin",      tool: "pin",         tooltip: pluginApi?.tr("tooltips.pin")         ?? "Pin a screen region as floating overlay"},
-        { icon: "ruler",         label: pluginApi?.tr("tools.measure")     ?? "Measure",  tool: "measure",     tooltip: pluginApi?.tr("tooltips.measure")     ?? "Measure distance in pixels"            },
-        { icon: "camera",        label: pluginApi?.tr("tools.mirror")      ?? "Mirror",   tool: "mirror",      tooltip: pluginApi?.tr("tooltips.mirror")      ?? "Floating webcam mirror"                }
-    ]
+    readonly property var toolDefs: pluginApi ? [
+        { icon: "color-picker",  label: pluginApi.tr("tools.colorpicker"), tool: "colorpicker", tooltip: pluginApi.tr("tooltips.colorpicker") },
+        { icon: "palette",       label: pluginApi.tr("tools.palette"),     tool: "palette",     tooltip: pluginApi.tr("tooltips.palette")     },
+        { icon: "scan",          label: pluginApi.tr("tools.ocr"),         tool: "ocr",         tooltip: pluginApi.tr("tooltips.ocr")         },
+        { icon: "world-search",  label: pluginApi.tr("tools.lens"),        tool: "lens",        tooltip: pluginApi.tr("tooltips.lens")        },
+        { icon: "qrcode",        label: pluginApi.tr("tools.qr"),          tool: "qr",          tooltip: pluginApi.tr("tooltips.qr")          },
+        { icon: "brush",         label: pluginApi.tr("tools.annotate"),    tool: "annotate",    tooltip: pluginApi.tr("tooltips.annotate")    },
+        { icon: "video",         label: pluginApi.tr("tools.record"),      tool: "record",      tooltip: pluginApi.tr("tooltips.record")      },
+        { icon: "pin",           label: pluginApi.tr("tools.pin"),         tool: "pin",         tooltip: pluginApi.tr("tooltips.pin")         },
+        { icon: "ruler",         label: pluginApi.tr("tools.measure"),     tool: "measure",     tooltip: pluginApi.tr("tooltips.measure")     },
+        { icon: "camera",        label: pluginApi.tr("tools.mirror"),      tool: "mirror",      tooltip: pluginApi.tr("tooltips.mirror")      }
+    ] : []
 
     property string selectedRecordFormat: "gif"
     property bool recordAudioOutput: false
@@ -199,26 +214,25 @@ Item {
 
     function triggerFocused() {
         var t = root.toolDefs[root.focusedTool].tool
-        Logger.i("ScreenToolkit", "triggerFocused: tool=" + t + " isRunning=" + root.isRunning + " main=" + root.main)
+        Logger.i("ScreenToolkit", "triggerFocused: tool=" + t + " isRunning=" + root.isRunning)
         if (root.isRunning) { Logger.w("ScreenToolkit", "blocked: isRunning"); return }
-        if (!root.main)     { Logger.e("ScreenToolkit", "FATAL: main is null! pluginApi=" + pluginApi); return }
         root.viewedTool = t
         if (t === "ocr" || t === "record") return
-        if      (t === "colorpicker") root.main.runColorPicker()
-        else if (t === "qr")          root.main.runQr()
-        else if (t === "lens")        root.main.runLens()
-        else if (t === "annotate")    root.main.runAnnotate()
-        else if (t === "measure")     root.main.runMeasure()
-        else if (t === "pin")         root.main.runPin()
-        else if (t === "palette")     root.main.runPalette()
-        else if (t === "mirror")      root.main.runMirror()
+        if      (t === "colorpicker") root.mainInstance?.runColorPicker()
+        else if (t === "qr")          root.mainInstance?.runQr()
+        else if (t === "lens")        root.mainInstance?.runLens()
+        else if (t === "annotate")    root.mainInstance?.runAnnotate()
+        else if (t === "measure")     root.mainInstance?.runMeasure()
+        else if (t === "pin")         root.mainInstance?.runPin()
+        else if (t === "palette")     root.mainInstance?.runPalette()
+        else if (t === "mirror")      root.mainInstance?.runMirror()
         else Logger.e("ScreenToolkit", "unknown tool: " + t)
     }
 
     onActiveFocusChanged: if (activeFocus) toolBar.forceActiveFocus()
 
     Component.onCompleted: {
-        Logger.i("ScreenToolkit", "Panel loaded — pluginApi=" + pluginApi + " main=" + main)
+        Logger.i("ScreenToolkit", "Panel loaded — pluginApi=" + pluginApi)
     }
 
     onInstalledLangsChanged: {
@@ -241,7 +255,7 @@ Item {
             Row {
                 width: parent.width; spacing: Style.marginS
                 NIcon { icon: "crosshair"; color: Color.mPrimary; anchors.verticalCenter: parent.verticalCenter }
-                NText { text: pluginApi?.tr("panel.title") ?? "Screen Toolkit"; pointSize: Style.fontSizeL; font.weight: Font.Bold; color: Color.mOnSurface; anchors.verticalCenter: parent.verticalCenter }
+                NText { text: pluginApi?.tr("panel.title"); pointSize: Style.fontSizeL; font.weight: Font.Bold; color: Color.mOnSurface; anchors.verticalCenter: parent.verticalCenter }
             }
 
             // ── Tool Buttons ──────────────────────────────
@@ -262,11 +276,9 @@ Item {
                         root.focusedTool = (root.focusedTool + 1) % 10
                         event.accepted = true
                     } else if (event.key === Qt.Key_Up) {
-                        // FIX: Up moves from row 2 → row 1; clamp if already on row 1
                         root.focusedTool = root.focusedTool >= 5 ? root.focusedTool - 5 : root.focusedTool
                         event.accepted = true
                     } else if (event.key === Qt.Key_Down) {
-                        // FIX: Down moves from row 1 → row 2; clamp if already on row 2
                         root.focusedTool = root.focusedTool < 5 ? root.focusedTool + 5 : root.focusedTool
                         event.accepted = true
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -331,7 +343,7 @@ Item {
                         icon: "loader"; color: Color.mPrimary
                         RotationAnimation on rotation { running: root.isRunning; from: 0; to: 360; duration: 1000; loops: Animation.Infinite }
                     }
-                    NText { text: pluginApi?.tr("panel.running") ?? "Running..."; color: Color.mOnSurfaceVariant }
+                    NText { text: pluginApi?.tr("panel.running"); color: Color.mOnSurfaceVariant }
                 }
             }
 
@@ -342,7 +354,7 @@ Item {
 
                 Flow {
                     width: parent.width; spacing: Style.marginS
-                    NText { text: pluginApi?.tr("panel.lang") ?? "Lang:"; color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; height: 26; verticalAlignment: Text.AlignVCenter }
+                    NText { text: pluginApi?.tr("panel.lang"); color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; height: 26; verticalAlignment: Text.AlignVCenter }
                     Repeater {
                         model: root.installedLangs
                         delegate: Rectangle {
@@ -361,9 +373,9 @@ Item {
                     Row {
                         anchors.centerIn: parent; spacing: Style.marginS
                         NIcon { icon: "scan"; color: scanBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary }
-                        NText { text: pluginApi?.tr("panel.scan") ?? "Scan"; color: scanBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
+                        NText { text: pluginApi?.tr("panel.scan"); color: scanBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
                     }
-                    MouseArea { id: scanBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.main.runOcr(root.selectedOcrLang) }
+                    MouseArea { id: scanBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.mainInstance?.runOcr(root.selectedOcrLang) }
                 }
             }
 
@@ -372,12 +384,10 @@ Item {
                 width: parent.width; spacing: Style.marginS
                 visible: root.viewedTool === "record" && !root.isRunning
 
-                // ── Format ────────────────────────────────
                 Flow {
                     width: parent.width; spacing: Style.marginS
-                    NText { text: pluginApi?.tr("panel.format") ?? "Format:"; color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; height: 26; verticalAlignment: Text.AlignVCenter }
+                    NText { text: pluginApi?.tr("panel.format"); color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; height: 26; verticalAlignment: Text.AlignVCenter }
                     Repeater {
-                        // GIF gets a · 30s hint, MP4 gets nothing
                         model: [{ id: "gif", label: "GIF", hint: "· 30s" }, { id: "mp4", label: "MP4", hint: "" }]
                         delegate: Rectangle {
                             height: 26
@@ -406,20 +416,19 @@ Item {
                     }
                 }
 
-                // ── Audio ─────────────────────────────────
                 Flow {
                     width: parent.width; spacing: Style.marginS
-                    NText { text: pluginApi?.tr("panel.audio") ?? "Audio:"; color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; height: 26; verticalAlignment: Text.AlignVCenter }
+                    NText { text: pluginApi?.tr("panel.audio"); color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; height: 26; verticalAlignment: Text.AlignVCenter }
                     Rectangle {
                         height: 26; width: audioOutIcon.implicitWidth + audioOutLabel.implicitWidth + Style.marginM * 2 + Style.marginS + 4; radius: Style.radiusS
                         color: root.recordAudioOutput ? Color.mPrimary : (audioOutArea.containsMouse ? Color.mHover : Color.mSurfaceVariant)
                         Row { anchors.centerIn: parent; spacing: 4
                             NIcon { id: audioOutIcon; icon: root.recordAudioOutput ? "volume" : "volume-off"; color: root.recordAudioOutput ? Color.mOnPrimary : Color.mOnSurface; scale: 0.8 }
-                            NText { id: audioOutLabel; text: pluginApi?.tr("panel.system") ?? "System"; color: root.recordAudioOutput ? Color.mOnPrimary : Color.mOnSurface; pointSize: Style.fontSizeXS; font.weight: root.recordAudioOutput ? Font.Bold : Font.Normal }
+                            NText { id: audioOutLabel; text: pluginApi?.tr("panel.system"); color: root.recordAudioOutput ? Color.mOnPrimary : Color.mOnSurface; pointSize: Style.fontSizeXS; font.weight: root.recordAudioOutput ? Font.Bold : Font.Normal }
                         }
                         MouseArea { id: audioOutArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: root.recordAudioOutput = !root.recordAudioOutput
-                            onEntered: TooltipService.show(audioOutArea, pluginApi?.tr("tooltips.systemAudio") ?? "Record system audio (desktop output)")
+                            onEntered: TooltipService.show(audioOutArea, pluginApi?.tr("tooltips.systemAudio"))
                             onExited: TooltipService.hide() }
                     }
                     Rectangle {
@@ -427,11 +436,11 @@ Item {
                         color: root.recordAudioInput ? Color.mPrimary : (micArea.containsMouse ? Color.mHover : Color.mSurfaceVariant)
                         Row { anchors.centerIn: parent; spacing: 4
                             NIcon { id: micIcon;  icon: root.recordAudioInput ? "microphone" : "microphone-off"; color: root.recordAudioInput ? Color.mOnPrimary : Color.mOnSurface; scale: 0.8 }
-                            NText { id: micLabel; text: pluginApi?.tr("panel.mic") ?? "Mic"; color: root.recordAudioInput ? Color.mOnPrimary : Color.mOnSurface; pointSize: Style.fontSizeXS; font.weight: root.recordAudioInput ? Font.Bold : Font.Normal }
+                            NText { id: micLabel; text: pluginApi?.tr("panel.mic"); color: root.recordAudioInput ? Color.mOnPrimary : Color.mOnSurface; pointSize: Style.fontSizeXS; font.weight: root.recordAudioInput ? Font.Bold : Font.Normal }
                         }
                         MouseArea { id: micArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: root.recordAudioInput = !root.recordAudioInput
-                            onEntered: TooltipService.show(micArea, pluginApi?.tr("tooltips.microphone") ?? "Record microphone")
+                            onEntered: TooltipService.show(micArea, pluginApi?.tr("tooltips.microphone"))
                             onExited: TooltipService.hide() }
                     }
                 }
@@ -443,10 +452,10 @@ Item {
                     Row {
                         anchors.centerIn: parent; spacing: Style.marginS
                         NIcon { icon: "video"; color: recStartBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary }
-                        NText { text: pluginApi?.tr("panel.record") ?? "Record"; color: recStartBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
+                        NText { text: pluginApi?.tr("panel.record"); color: recStartBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
                     }
                     MouseArea { id: recStartBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: root.main.runRecord(root.selectedRecordFormat, root.recordAudioOutput, root.recordAudioInput) }
+                        onClicked: root.mainInstance?.runRecord(root.selectedRecordFormat, root.recordAudioOutput, root.recordAudioInput) }
                 }
             }
 
@@ -458,34 +467,34 @@ Item {
                 Row {
                     width: parent.width; spacing: Style.marginS
                     NIcon { icon: "camera"; color: Color.mPrimary; anchors.verticalCenter: parent.verticalCenter }
-                    NText { text: pluginApi?.tr("mirror.title") ?? "Webcam Mirror"; color: Color.mOnSurface; font.weight: Font.Bold; pointSize: Style.fontSizeS; anchors.verticalCenter: parent.verticalCenter }
+                    NText { text: pluginApi?.tr("mirror.title"); color: Color.mOnSurface; font.weight: Font.Bold; pointSize: Style.fontSizeS; anchors.verticalCenter: parent.verticalCenter }
                 }
 
                 NText {
                     width: parent.width; wrapMode: Text.WordWrap
-                    text: pluginApi?.tr("mirror.hint") ?? "Floating camera preview. Drag to move, resize from corners."
+                    text: pluginApi?.tr("mirror.hint")
                     color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS
                 }
 
                 Rectangle {
                     width: parent.width; height: 38; radius: Style.radiusM
-                    color: root.main && root.main.mirrorVisible ? Color.mError : (mirrorToggleBtn.containsMouse ? Color.mPrimary : Color.mSurface)
-                    border.color: root.main && root.main.mirrorVisible ? Color.mError : Color.mPrimary
+                    color: root.mirrorActive ? Color.mError : (mirrorToggleBtn.containsMouse ? Color.mPrimary : Color.mSurface)
+                    border.color: root.mirrorActive ? Color.mError : Color.mPrimary
                     border.width: Style.capsuleBorderWidth || 1
                     Row {
                         anchors.centerIn: parent; spacing: Style.marginS
                         NIcon {
-                            icon: root.main && root.main.mirrorVisible ? "camera-off" : "camera"
-                            color: root.main && root.main.mirrorVisible ? Color.mOnError : (mirrorToggleBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary)
+                            icon: root.mirrorActive ? "camera-off" : "camera"
+                            color: root.mirrorActive ? Color.mOnError : (mirrorToggleBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary)
                         }
                         NText {
-                            text: root.main && root.main.mirrorVisible ? (pluginApi?.tr("mirror.close") ?? "Close Mirror") : (pluginApi?.tr("mirror.open") ?? "Open Mirror")
-                            color: root.main && root.main.mirrorVisible ? Color.mOnError : (mirrorToggleBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary)
+                            text: root.mirrorActive ? pluginApi?.tr("mirror.close") : pluginApi?.tr("mirror.open")
+                            color: root.mirrorActive ? Color.mOnError : (mirrorToggleBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary)
                             font.weight: Font.Bold; pointSize: Style.fontSizeS
                         }
                     }
                     MouseArea { id: mirrorToggleBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: root.main.runMirror() }
+                        onClicked: root.mainInstance?.runMirror() }
                 }
             }
 
@@ -553,7 +562,7 @@ Item {
                         }
                         NIcon { icon: "copy"; color: Color.mOnSurfaceVariant; anchors.right: parent.right; anchors.rightMargin: Style.marginS; anchors.verticalCenter: parent.verticalCenter }
                         MouseArea { id: rh; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { root.main?.copyToClipboard(modelData.value); ToastService.showNotice(modelData.label + " copied") } }
+                            onClicked: { root.copyToClipboard(modelData.value); ToastService.showNotice(modelData.label + " copied") } }
                     }
                 }
 
@@ -565,10 +574,10 @@ Item {
                         border.color: Color.mPrimary; border.width: Style.capsuleBorderWidth || 1
                         Row { anchors.centerIn: parent; spacing: Style.marginS
                             NIcon { icon: "copy"; color: cah.containsMouse ? Color.mOnPrimary : Color.mPrimary }
-                            NText { text: pluginApi?.tr("panel.copyAll") ?? "Copy All"; color: cah.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
+                            NText { text: pluginApi?.tr("panel.copyAll"); color: cah.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
                         }
                         MouseArea { id: cah; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { root.main?.copyToClipboard(root.pickedHex + "\n" + root.pickedRgb + "\n" + root.pickedHsl + "\n" + root.pickedHsv); ToastService.showNotice(pluginApi?.tr("panel.allFormatsCopied") ?? "All formats copied") } }
+                            onClicked: { root.copyToClipboard(root.pickedHex + "\n" + root.pickedRgb + "\n" + root.pickedHsl + "\n" + root.pickedHsv); ToastService.showNotice(pluginApi?.tr("panel.allFormatsCopied")) } }
                     }
                     Rectangle {
                         width: 38; height: 36; radius: Style.radiusM
@@ -584,7 +593,7 @@ Item {
                                 }
                                 root.viewedTool = ""
                             }
-                            onEntered: TooltipService.show(clrh, pluginApi?.tr("panel.clearResult") ?? "Clear result"); onExited: TooltipService.hide() }
+                            onEntered: TooltipService.show(clrh, pluginApi?.tr("panel.clearResult")); onExited: TooltipService.hide() }
                     }
                 }
 
@@ -594,14 +603,14 @@ Item {
                     Row {
                         width: parent.width; spacing: Style.marginS
                         Rectangle { width: 40; height: 1; color: Color.mOnSurfaceVariant; opacity: 0.3; anchors.verticalCenter: parent.verticalCenter }
-                        NText { text: pluginApi?.tr("panel.history") ?? "History"; color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS }
+                        NText { text: pluginApi?.tr("panel.history"); color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS }
                         Rectangle { width: parent.width - 120; height: 1; color: Color.mOnSurfaceVariant; opacity: 0.3; anchors.verticalCenter: parent.verticalCenter }
                         Rectangle {
                             width: 22; height: 22; radius: Style.radiusS || 4; anchors.verticalCenter: parent.verticalCenter
                             color: hhc.containsMouse ? Color.mErrorContainer || "#ffcdd2" : "transparent"
                             NIcon { anchors.centerIn: parent; icon: "trash"; color: hhc.containsMouse ? Color.mError || "#f44336" : Color.mOnSurfaceVariant; scale: 0.75 }
                             MouseArea { id: hhc; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: { if (pluginApi) { pluginApi.pluginSettings.colorHistory = []; pluginApi.saveSettings() }; ToastService.showNotice(pluginApi?.tr("panel.historyCleared") ?? "History cleared") } }
+                                onClicked: { if (pluginApi) { pluginApi.pluginSettings.colorHistory = []; pluginApi.saveSettings() }; ToastService.showNotice(pluginApi?.tr("panel.historyCleared")) } }
                         }
                     }
                     Row {
@@ -614,7 +623,7 @@ Item {
                                 border.width: hh.containsMouse ? 2 : (Style.capsuleBorderWidth || 1)
                                 Component.onCompleted: color = modelData
                                 MouseArea { id: hh; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: { root.main?.copyToClipboard(modelData); ToastService.showNotice(modelData + " copied") }
+                                    onClicked: { root.copyToClipboard(modelData); ToastService.showNotice(modelData + " copied") }
                                     onEntered: TooltipService.show(hh, modelData.toUpperCase() + " — click to copy"); onExited: TooltipService.hide() }
                             }
                         }
@@ -630,7 +639,7 @@ Item {
                 Row {
                     width: parent.width; spacing: Style.marginS
                     NIcon { icon: "scan"; color: Color.mPrimary; anchors.verticalCenter: parent.verticalCenter }
-                    NText { text: pluginApi?.tr("ocr.title") ?? "OCR"; color: Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS; anchors.verticalCenter: parent.verticalCenter }
+                    NText { text: pluginApi?.tr("ocr.title"); color: Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS; anchors.verticalCenter: parent.verticalCenter }
                 }
 
                 Rectangle {
@@ -670,7 +679,7 @@ Item {
                         NIcon { anchors.centerIn: parent; icon: root.ocrType === "email" ? "mail" : "external-link"; color: olinkh.containsMouse ? Color.mOnPrimary : Color.mPrimary }
                         MouseArea { id: olinkh; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: root.ocrType === "email" ? Qt.openUrlExternally("mailto:" + root.ocrEmail) : Qt.openUrlExternally(root.ocrUrl)
-                            onEntered: TooltipService.show(olinkh, root.ocrType === "email" ? (pluginApi?.tr("tooltips.composeEmail") ?? "Compose email") : (pluginApi?.tr("tooltips.openUrl") ?? "Open URL")); onExited: TooltipService.hide() }
+                            onEntered: TooltipService.show(olinkh, root.ocrType === "email" ? pluginApi?.tr("tooltips.composeEmail") : pluginApi?.tr("tooltips.openUrl")); onExited: TooltipService.hide() }
                     }
                     Rectangle {
                         width: 38; height: 38; radius: Style.radiusM
@@ -679,7 +688,7 @@ Item {
                         NIcon { anchors.centerIn: parent; icon: "search"; color: osearchh.containsMouse ? Color.mOnPrimary : Color.mPrimary }
                         MouseArea { id: osearchh; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: Qt.openUrlExternally("https://www.google.com/search?q=" + encodeURIComponent(root.ocrResult.trim()))
-                            onEntered: TooltipService.show(osearchh, pluginApi?.tr("panel.searchText") ?? "Search text"); onExited: TooltipService.hide() }
+                            onEntered: TooltipService.show(osearchh, pluginApi?.tr("panel.searchText")); onExited: TooltipService.hide() }
                     }
                     Rectangle {
                         width: 38; height: 38; radius: Style.radiusM
@@ -687,8 +696,8 @@ Item {
                         border.color: Color.mPrimary; border.width: Style.capsuleBorderWidth || 1
                         NIcon { anchors.centerIn: parent; icon: "copy"; color: ocopyh.containsMouse ? Color.mOnPrimary : Color.mPrimary }
                         MouseArea { id: ocopyh; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { root.main?.copyToClipboard(root.ocrResult); ToastService.showNotice(pluginApi?.tr("panel.copyText") ?? "Text copied") }
-                            onEntered: TooltipService.show(ocopyh, pluginApi?.tr("panel.copyText") ?? "Copy text"); onExited: TooltipService.hide() }
+                            onClicked: { root.copyToClipboard(root.ocrResult); ToastService.showNotice(pluginApi?.tr("panel.copyText")) }
+                            onEntered: TooltipService.show(ocopyh, pluginApi?.tr("panel.copyText")); onExited: TooltipService.hide() }
                     }
                     Rectangle {
                         width: 38; height: 38; radius: Style.radiusM
@@ -696,8 +705,8 @@ Item {
                         border.color: oclear.containsMouse ? Color.mError || "#f44336" : (Style.capsuleBorderColor || "transparent"); border.width: Style.capsuleBorderWidth || 1
                         NIcon { anchors.centerIn: parent; icon: "trash"; color: oclear.containsMouse ? Color.mError || "#f44336" : Color.mOnSurfaceVariant }
                         MouseArea { id: oclear; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { if (pluginApi) { pluginApi.pluginSettings.ocrResult = ""; pluginApi.pluginSettings.ocrCapturePath = ""; pluginApi.saveSettings() }; if (root.main) root.main.activeTool = "" }
-                            onEntered: TooltipService.show(oclear, pluginApi?.tr("panel.clearResult") ?? "Clear result"); onExited: TooltipService.hide() }
+                            onClicked: { if (pluginApi) { pluginApi.pluginSettings.ocrResult = ""; pluginApi.pluginSettings.ocrCapturePath = ""; pluginApi.pluginSettings.stateActiveTool = ""; pluginApi.saveSettings() } }
+                            onEntered: TooltipService.show(oclear, pluginApi?.tr("panel.clearResult")); onExited: TooltipService.hide() }
                     }
                 }
 
@@ -708,13 +717,13 @@ Item {
                         width: parent.width; spacing: Style.marginS
                         Rectangle { width: 40; height: 1; color: Color.mOnSurfaceVariant; opacity: 0.3; anchors.verticalCenter: parent.verticalCenter }
                         NIcon { icon: "world"; color: Color.mOnSurfaceVariant; scale: 0.8 }
-                        NText { text: pluginApi?.tr("ocr.translateSection") ?? "Translate"; color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS }
+                        NText { text: pluginApi?.tr("ocr.translateSection"); color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS }
                         Rectangle { width: parent.width - 130; height: 1; color: Color.mOnSurfaceVariant; opacity: 0.3; anchors.verticalCenter: parent.verticalCenter }
                     }
 
                     NText {
                         visible: !root.transAvailable; width: parent.width
-                        text: pluginApi?.tr("ocr.noTranslateTool") ?? "translate-shell not found"
+                        text: pluginApi?.tr("ocr.noTranslateTool")
                         color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeXS; wrapMode: Text.WordWrap
                     }
 
@@ -767,9 +776,9 @@ Item {
                             height: 34; width: tbt.implicitWidth + Style.marginL * 2; radius: Style.radiusM
                             color: tbh.containsMouse ? Color.mPrimary : Color.mSurfaceVariant
                             border.color: Color.mPrimary; border.width: Style.capsuleBorderWidth || 1
-                            NText { id: tbt; anchors.centerIn: parent; text: pluginApi?.tr("panel.translate") ?? "Translate"; color: tbh.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
+                            NText { id: tbt; anchors.centerIn: parent; text: pluginApi?.tr("panel.translate"); color: tbh.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS }
                             MouseArea { id: tbh; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: { transLangSelector.open = false; root.main?.runTranslate(root.ocrResult, root.selectedTransLang) } }
+                                onClicked: { transLangSelector.open = false; root.runTranslate(root.ocrResult, root.selectedTransLang) } }
                         }
                     }
 
@@ -794,7 +803,7 @@ Item {
                             icon: "copy"; color: Color.mOnSurfaceVariant
                             anchors.right: parent.right; anchors.top: parent.top; anchors.margins: Style.marginS
                             MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                                onClicked: { root.main?.copyToClipboard(root.translateResult); ToastService.showNotice(pluginApi?.tr("panel.translationCopied") ?? "Translation copied") } }
+                                onClicked: { root.copyToClipboard(root.translateResult); ToastService.showNotice(pluginApi?.tr("panel.translationCopied")) } }
                         }
                     }
                 }
@@ -845,7 +854,7 @@ Item {
                             NText { text: root.qrWifiPass ? "••••••••" : "No password"; color: Color.mOnSurfaceVariant; pointSize: Style.fontSizeS }
                             NIcon { icon: "copy"; color: Color.mOnSurfaceVariant } }
                         MouseArea { id: wph; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; enabled: root.qrWifiPass !== ""
-                            onClicked: { root.main?.copyToClipboard(root.qrWifiPass); ToastService.showNotice(pluginApi?.tr("panel.passwordCopied") ?? "Password copied") } }
+                            onClicked: { root.copyToClipboard(root.qrWifiPass); ToastService.showNotice(pluginApi?.tr("panel.passwordCopied")) } }
                     }
                 }
 
@@ -875,9 +884,9 @@ Item {
                         border.color: Color.mPrimary; border.width: Style.capsuleBorderWidth || 1
                         Row { anchors.centerIn: parent; spacing: Style.marginS
                             NIcon { icon: root.qrType === "url" ? "external-link" : root.qrType === "email" ? "mail" : "copy"; color: qah.containsMouse ? Color.mOnPrimary : Color.mPrimary }
-                            NText { text: root.qrType === "url" ? (pluginApi?.tr("panel.openUrl") ?? "Open URL") : root.qrType === "email" ? (pluginApi?.tr("panel.composeEmail") ?? "Compose Email") : (pluginApi?.tr("panel.copy") ?? "Copy"); color: qah.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
+                            NText { text: root.qrType === "url" ? pluginApi?.tr("panel.openUrl") : root.qrType === "email" ? pluginApi?.tr("panel.composeEmail") : pluginApi?.tr("panel.copy"); color: qah.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
                         MouseArea { id: qah; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { if (root.qrType === "url" || root.qrType === "email") Qt.openUrlExternally(root.qrResult); else { root.main?.copyToClipboard(root.qrResult); ToastService.showNotice(pluginApi?.tr("panel.copied") ?? "Copied") } } }
+                            onClicked: { if (root.qrType === "url" || root.qrType === "email") Qt.openUrlExternally(root.qrResult); else { root.copyToClipboard(root.qrResult); ToastService.showNotice(pluginApi?.tr("panel.copied")) } } }
                     }
                     Rectangle {
                         width: 38; height: 38; radius: Style.radiusM
@@ -885,7 +894,7 @@ Item {
                         border.color: qch.containsMouse ? Color.mError || "#f44336" : (Style.capsuleBorderColor || "transparent"); border.width: Style.capsuleBorderWidth || 1
                         NIcon { anchors.centerIn: parent; icon: "trash"; color: qch.containsMouse ? Color.mError || "#f44336" : Color.mOnSurfaceVariant }
                         MouseArea { id: qch; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: { if (pluginApi) { pluginApi.pluginSettings.qrResult = ""; pluginApi.saveSettings() }; if (root.main) root.main.activeTool = "" } }
+                            onClicked: { if (pluginApi) { pluginApi.pluginSettings.qrResult = ""; pluginApi.pluginSettings.stateActiveTool = ""; pluginApi.saveSettings() } } }
                     }
                 }
             }
@@ -898,7 +907,7 @@ Item {
                 Row {
                     width: parent.width; spacing: Style.marginS
                     NIcon { icon: "palette"; color: Color.mPrimary; anchors.verticalCenter: parent.verticalCenter }
-                    NText { text: pluginApi?.tr("palette.title") ?? "Palette"; color: Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS; anchors.verticalCenter: parent.verticalCenter }
+                    NText { text: pluginApi?.tr("palette.title"); color: Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS; anchors.verticalCenter: parent.verticalCenter }
                 }
 
                 Flow {
@@ -916,7 +925,7 @@ Item {
                                 style: Text.Outline; styleColor: "#00000066"
                             }
                             MouseArea { id: swatchBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onClicked: { root.main?.copyToClipboard(modelData); ToastService.showNotice(modelData + " copied") }
+                                onClicked: { root.copyToClipboard(modelData); ToastService.showNotice(modelData + " copied") }
                                 onEntered: TooltipService.show(swatchBtn, modelData.toUpperCase() + " — click to copy"); onExited: TooltipService.hide() }
                         }
                     }
@@ -928,9 +937,9 @@ Item {
                     border.color: Color.mPrimary; border.width: Style.capsuleBorderWidth || 1
                     Row { anchors.centerIn: parent; spacing: Style.marginS
                         NIcon { icon: "copy"; color: cssBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary }
-                        NText { text: pluginApi?.tr("palette.cssVars") ?? "Copy as CSS vars"; color: cssBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
+                        NText { text: pluginApi?.tr("palette.cssVars"); color: cssBtn.containsMouse ? Color.mOnPrimary : Color.mPrimary; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
                     MouseArea { id: cssBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: { var css = root.paletteColors.map(function(c, i) { return "--color-" + (i+1) + ": " + c + ";" }).join("\n"); root.main?.copyToClipboard(css); ToastService.showNotice(pluginApi?.tr("panel.cssVarsCopied") ?? "CSS vars copied") } }
+                        onClicked: { var css = root.paletteColors.map(function(c, i) { return "--color-" + (i+1) + ": " + c + ";" }).join("\n"); root.copyToClipboard(css); ToastService.showNotice(pluginApi?.tr("panel.cssVarsCopied")) } }
                 }
 
                 Rectangle {
@@ -939,9 +948,9 @@ Item {
                     border.color: Style.capsuleBorderColor || "transparent"; border.width: Style.capsuleBorderWidth || 1
                     Row { anchors.centerIn: parent; spacing: Style.marginS
                         NIcon { icon: "list"; color: hexBtn.containsMouse ? Color.mOnSurface : Color.mOnSurfaceVariant }
-                        NText { text: pluginApi?.tr("palette.hexList") ?? "Copy hex list"; color: hexBtn.containsMouse ? Color.mOnSurface : Color.mOnSurfaceVariant; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
+                        NText { text: pluginApi?.tr("palette.hexList"); color: hexBtn.containsMouse ? Color.mOnSurface : Color.mOnSurfaceVariant; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
                     MouseArea { id: hexBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                        onClicked: { root.main?.copyToClipboard(root.paletteColors.join("\n")); ToastService.showNotice(pluginApi?.tr("panel.hexListCopied") ?? "Hex list copied") } }
+                        onClicked: { root.copyToClipboard(root.paletteColors.join("\n")); ToastService.showNotice(pluginApi?.tr("panel.hexListCopied")) } }
                 }
 
                 Rectangle {
@@ -950,7 +959,7 @@ Item {
                     border.color: palClr.containsMouse ? Color.mError || "#f44336" : (Style.capsuleBorderColor || "transparent"); border.width: Style.capsuleBorderWidth || 1
                     Row { anchors.centerIn: parent; spacing: Style.marginS
                         NIcon { icon: "trash"; color: palClr.containsMouse ? Color.mError || "#f44336" : Color.mOnSurfaceVariant }
-                        NText { text: pluginApi?.tr("panel.clear") ?? "Clear"; color: palClr.containsMouse ? Color.mError || "#f44336" : Color.mOnSurfaceVariant; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
+                        NText { text: pluginApi?.tr("panel.clear"); color: palClr.containsMouse ? Color.mError || "#f44336" : Color.mOnSurfaceVariant; font.weight: Font.Bold; pointSize: Style.fontSizeS } }
                     MouseArea { id: palClr; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                         onClicked: { if (pluginApi) { pluginApi.pluginSettings.paletteColors = []; pluginApi.saveSettings() }; root.viewedTool = "" } }
                 }

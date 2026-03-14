@@ -7,7 +7,7 @@ import qs.Widgets
 import qs.Services.UI
 
 Variants {
-    id: annotateVariants
+    id: root
 
     property string imagePath: "/tmp/screen-toolkit-annotate.png"
     property var mainInstance: null
@@ -54,10 +54,6 @@ Variants {
 
     property bool _resetToken: false
 
-    function _tr(key, interp) {
-        return annotateVariants.mainInstance?.pluginApi?.tr(key, interp ?? {}) ?? key
-    }
-
     function hide() { isVisible = false }
 
     model: Quickshell.screens
@@ -70,10 +66,10 @@ Variants {
 
         anchors { top: true; bottom: true; left: true; right: true }
         color: "transparent"
-        visible: annotateVariants.isVisible
+        visible: root.isVisible
 
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: annotateVariants.isVisible
+        WlrLayershell.keyboardFocus: root.isVisible
             ? WlrKeyboardFocus.Exclusive
             : WlrKeyboardFocus.None
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
@@ -106,18 +102,18 @@ Variants {
 
         // ── Zoom ───────────────────────────────────────
         function requestZoom(scale) {
-            var region = annotateVariants.lastRegion
+            var region = root.lastRegion
             if (region === "") return
             if (scale === 1.0) {
                 overlayWin.strokes = overlayWin._savedStrokes.slice()
                 overlayWin._savedStrokes = []
                 overlayWin.panX = 0.0
                 overlayWin.panY = 0.0
-                annotateVariants.parseAndShow(region, "/tmp/screen-toolkit-annotate.png")
+                root.parseAndShow(region, "/tmp/screen-toolkit-annotate.png")
                 drawCanvas.requestPaint()
                 return
             }
-            if (annotateVariants.zoomScale === 1.0) {
+            if (root.zoomScale === 1.0) {
                 overlayWin._savedStrokes = overlayWin.strokes.slice()
                 overlayWin.strokes = []
                 overlayWin.currentStroke = null
@@ -125,8 +121,8 @@ Variants {
             _pendingZoomScale = scale
             overlayWin.panX = 0.0
             overlayWin.panY = 0.0
-            var newW = Math.round(annotateVariants.regionW * scale)
-            var newH = Math.round(annotateVariants.regionH * scale)
+            var newW = Math.round(root.regionW * scale)
+            var newH = Math.round(root.regionH * scale)
             zoomProc.exec({ command: [
                 "bash", "-c",
                 "magick /tmp/screen-toolkit-annotate.png -resize " + newW + "x" + newH + "! /tmp/screen-toolkit-annotate-zoom.png 2>/dev/null"
@@ -148,11 +144,11 @@ Variants {
         property string _lastPreparedPath: ""
 
         function preparePixelImage() {
-            if (annotateVariants.imagePath === overlayWin._lastPreparedPath && overlayWin.pixelImgReady) {
+            if (root.imagePath === overlayWin._lastPreparedPath && overlayWin.pixelImgReady) {
                 drawCanvas.requestPaint()
                 return
             }
-            overlayWin._lastPreparedPath = annotateVariants.imagePath
+            overlayWin._lastPreparedPath = root.imagePath
             pixelImgReady = false
             pixelateProc.exec({ command: [
                 "bash", "-c",
@@ -172,8 +168,8 @@ Variants {
             id: zoomProc
             onExited: (code) => {
                 if (code === 0) {
-                    annotateVariants.parseAndShowZoomed(
-                        annotateVariants.lastRegion,
+                    root.parseAndShowZoomed(
+                        root.lastRegion,
                         "/tmp/screen-toolkit-annotate-zoom.png",
                         overlayWin._pendingZoomScale)
                 }
@@ -185,10 +181,10 @@ Variants {
             onExited: (code) => {
                 overlayWin.isSaving = false
                 if (code === 0) {
-                    ToastService.showNotice(annotateVariants._tr("annotate.copied"), "", "copy")
-                    annotateVariants.hide()
+                    ToastService.showNotice(root.mainInstance?.pluginApi?.tr("annotate.copied"), "", "copy")
+                    root.hide()
                 } else {
-                    ToastService.showError(annotateVariants._tr("annotate.copyFailed"))
+                    ToastService.showError(root.mainInstance?.pluginApi?.tr("annotate.copyFailed"))
                 }
             }
         }
@@ -198,10 +194,10 @@ Variants {
             onExited: (code) => {
                 overlayWin.isSaving = false
                 if (code === 0) {
-                    ToastService.showNotice(annotateVariants._tr("annotate.copied"), "", "copy")
-                    annotateVariants.hide()
+                    ToastService.showNotice(root.mainInstance?.pluginApi?.tr("annotate.copied"), "", "copy")
+                    root.hide()
                 } else {
-                    ToastService.showError(annotateVariants._tr("annotate.saveFailed"))
+                    ToastService.showError(root.mainInstance?.pluginApi?.tr("annotate.saveFailed"))
                 }
             }
         }
@@ -214,10 +210,10 @@ Variants {
                 overlayWin.isSaving = false
                 if (code === 0) {
                     var dest = saveFileProc.stdout.text.trim()
-                    ToastService.showNotice(annotateVariants._tr("annotate.savedTo", { dest: dest !== "" ? dest : "~/Pictures" }), saveFileProc.savedPath, "device-floppy")
-                    annotateVariants.hide()
+                    ToastService.showNotice(root.mainInstance?.pluginApi?.tr("annotate.savedTo", { dest: dest !== "" ? dest : "~/Pictures" }), saveFileProc.savedPath, "device-floppy")
+                    root.hide()
                 } else {
-                    ToastService.showError(annotateVariants._tr("annotate.saveFileFailed"))
+                    ToastService.showError(root.mainInstance?.pluginApi?.tr("annotate.saveFileFailed"))
                 }
             }
         }
@@ -225,14 +221,14 @@ Variants {
         // ── Keys ───────────────────────────────────────
         Shortcut {
             sequence: "Escape"
-            onActivated: { overlayWin.strokes = []; annotateVariants.hide() }
+            onActivated: { overlayWin.strokes = []; root.hide() }
         }
 
         // ── Reset on hide ──────────────────────────────
         Connections {
-            target: annotateVariants
+            target: root
             function onIsVisibleChanged() {
-                if (!annotateVariants.isVisible) {
+                if (!root.isVisible) {
                     overlayWin.strokes = []
                     overlayWin._savedStrokes = []
                     overlayWin.currentStroke = null
@@ -256,17 +252,17 @@ Variants {
             anchors.fill: parent
             color: Qt.rgba(0, 0, 0, 0.55)
             Rectangle {
-                x: annotateVariants.regionX
-                y: annotateVariants.regionY
-                width: annotateVariants.regionW
-                height: annotateVariants.regionH
+                x: root.regionX
+                y: root.regionY
+                width: root.regionW
+                height: root.regionH
                 color: "transparent"
             }
             MouseArea {
                 anchors.fill: parent
                 onClicked: (mouse) => {
-                    var ix = annotateVariants.regionX, iy = annotateVariants.regionY
-                    var iw = annotateVariants.regionW, ih = annotateVariants.regionH
+                    var ix = root.regionX, iy = root.regionY
+                    var iw = root.regionW, ih = root.regionH
                     var inRegion  = mouse.x >= ix && mouse.x <= ix+iw && mouse.y >= iy && mouse.y <= iy+ih
                     var inToolbar = mouse.x >= toolbar.x && mouse.x <= toolbar.x+toolbar.width
                                  && mouse.y >= toolbar.y && mouse.y <= toolbar.y+toolbar.height
@@ -275,7 +271,7 @@ Variants {
                                  && mouse.y >= popover.y && mouse.y <= popover.y+popover.height
                     if (!inRegion && !inToolbar && !inPopover) {
                         overlayWin.strokes = []
-                        annotateVariants.hide()
+                        root.hide()
                     }
                 }
             }
@@ -284,23 +280,23 @@ Variants {
         // ── Capture root ───────────────────────────────
         Item {
             id: captureRoot
-            x: annotateVariants.regionX
-            y: annotateVariants.regionY
-            width: annotateVariants.regionW
-            height: annotateVariants.regionH
+            x: root.regionX
+            y: root.regionY
+            width: root.regionW
+            height: root.regionH
             clip: true
 
             Image {
                 id: imgLoader
-                width:  annotateVariants.zoomScale > 1.0 ? annotateVariants.regionW * annotateVariants.zoomScale : annotateVariants.regionW
-                height: annotateVariants.zoomScale > 1.0 ? annotateVariants.regionH * annotateVariants.zoomScale : annotateVariants.regionH
-                x: annotateVariants.zoomScale > 1.0
-                   ? Math.max(annotateVariants.regionW - width, Math.min(0, (annotateVariants.regionW - width) / 2 + overlayWin.panX))
+                width:  root.zoomScale > 1.0 ? root.regionW * root.zoomScale : root.regionW
+                height: root.zoomScale > 1.0 ? root.regionH * root.zoomScale : root.regionH
+                x: root.zoomScale > 1.0
+                   ? Math.max(root.regionW - width, Math.min(0, (root.regionW - width) / 2 + overlayWin.panX))
                    : 0
-                y: annotateVariants.zoomScale > 1.0
-                   ? Math.max(annotateVariants.regionH - height, Math.min(0, (annotateVariants.regionH - height) / 2 + overlayWin.panY))
+                y: root.zoomScale > 1.0
+                   ? Math.max(root.regionH - height, Math.min(0, (root.regionH - height) / 2 + overlayWin.panY))
                    : 0
-                source: annotateVariants.isVisible ? "file://" + annotateVariants.imagePath : ""
+                source: root.isVisible ? "file://" + root.imagePath + "?v=" + root._resetToken : ""
                 fillMode: Image.Stretch
                 cache: false; smooth: true
             }
@@ -315,8 +311,8 @@ Variants {
                     clip: true
                     Image {
                         x: -parent.x; y: -parent.y
-                        width: annotateVariants.regionW
-                        height: annotateVariants.regionH
+                        width: root.regionW
+                        height: root.regionH
                         source: overlayWin.pixelImgReady ? "file:///tmp/screen-toolkit-annotate-pixel.png?" + overlayWin._pixelCacheBust : ""
                         fillMode: Image.Stretch; cache: false; smooth: false
                     }
@@ -326,9 +322,9 @@ Variants {
 
         // ── Blur preview ───────────────────────────────
         Rectangle {
-            visible: annotateVariants.zoomScale <= 1.0 && overlayWin.drawing && overlayWin.currentStroke && overlayWin.currentStroke.type === "blur"
-            x: annotateVariants.regionX + (overlayWin.currentStroke ? Math.min(overlayWin.currentStroke.x1, overlayWin.currentStroke.x2) : 0)
-            y: annotateVariants.regionY + (overlayWin.currentStroke ? Math.min(overlayWin.currentStroke.y1, overlayWin.currentStroke.y2) : 0)
+            visible: root.zoomScale <= 1.0 && overlayWin.drawing && overlayWin.currentStroke && overlayWin.currentStroke.type === "blur"
+            x: root.regionX + (overlayWin.currentStroke ? Math.min(overlayWin.currentStroke.x1, overlayWin.currentStroke.x2) : 0)
+            y: root.regionY + (overlayWin.currentStroke ? Math.min(overlayWin.currentStroke.y1, overlayWin.currentStroke.y2) : 0)
             width:  overlayWin.currentStroke ? Math.abs(overlayWin.currentStroke.x2 - overlayWin.currentStroke.x1) : 0
             height: overlayWin.currentStroke ? Math.abs(overlayWin.currentStroke.y2 - overlayWin.currentStroke.y1) : 0
             color: "transparent"; border.color: "#ffffff"; border.width: 1.5; opacity: 0.8
@@ -336,27 +332,27 @@ Variants {
 
         // ── Zoom badge ─────────────────────────────────
         Rectangle {
-            visible: annotateVariants.zoomScale > 1.0
-            x: annotateVariants.regionX + annotateVariants.regionW - width - 8
-            y: annotateVariants.regionY + 8
+            visible: root.zoomScale > 1.0
+            x: root.regionX + root.regionW - width - 8
+            y: root.regionY + 8
             width: zoomBadgeRow.implicitWidth + 12; height: 22; radius: 6
             color: Qt.rgba(0, 0, 0, 0.6)
             Row {
                 id: zoomBadgeRow
                 anchors.centerIn: parent; spacing: 4
                 NIcon { icon: "zoom-in"; color: "#ffffff" }
-                NText { text: Math.round(annotateVariants.zoomScale) + "× — view only"; color: "#ffffff"; pointSize: Style.fontSizeXS }
+                NText { text: Math.round(root.zoomScale) + "× — view only"; color: "#ffffff"; pointSize: Style.fontSizeXS }
             }
         }
 
         // ── Drawing canvas ─────────────────────────────
         Canvas {
             id: drawCanvas
-            x: annotateVariants.regionX
-            y: annotateVariants.regionY
-            width: annotateVariants.regionW
-            height: annotateVariants.regionH
-            visible: annotateVariants.zoomScale <= 1.0
+            x: root.regionX
+            y: root.regionY
+            width: root.regionW
+            height: root.regionH
+            visible: root.zoomScale <= 1.0
 
             onImageLoaded: requestPaint()
 
@@ -386,7 +382,7 @@ Variants {
                         if (isImageLoaded(pixUrl)) {
                             ctx.save()
                             ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.clip()
-                            ctx.drawImage(pixUrl, 0, 0, annotateVariants.regionW, annotateVariants.regionH)
+                            ctx.drawImage(pixUrl, 0, 0, root.regionW, root.regionH)
                             ctx.restore()
                         }
                     }
@@ -498,9 +494,9 @@ Variants {
 
         // ── Pan area (zoom mode only) ───────────────────
         MouseArea {
-            x: annotateVariants.regionX; y: annotateVariants.regionY
-            width: annotateVariants.regionW; height: annotateVariants.regionH
-            visible: annotateVariants.zoomScale > 1.0
+            x: root.regionX; y: root.regionY
+            width: root.regionW; height: root.regionH
+            visible: root.zoomScale > 1.0
             hoverEnabled: true
             cursorShape: overlayWin.isPanning ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             onPressed: (mouse) => {
@@ -520,29 +516,26 @@ Variants {
         Rectangle {
             id: toolbar
 
-            readonly property real spaceBelow: overlayWin.height - (annotateVariants.regionY + annotateVariants.regionH)
-            readonly property real spaceAbove: annotateVariants.regionY
-            readonly property real spaceRight: overlayWin.width - (annotateVariants.regionX + annotateVariants.regionW)
+            readonly property real spaceBelow: overlayWin.height - (root.regionY + root.regionH)
+            readonly property real spaceAbove: root.regionY
+            readonly property real spaceRight: overlayWin.width - (root.regionX + root.regionW)
             readonly property bool useVertical: spaceBelow < 56 && spaceAbove < 56
 
             width:  useVertical ? 56 : (toolbarContent.implicitWidth + Style.marginM * 2)
             height: useVertical ? (toolbarContent.implicitHeight + Style.marginM * 2) : 52
 
             x: useVertical
-               ? (spaceRight >= 56 ? annotateVariants.regionX + annotateVariants.regionW + 8 : Math.max(8, annotateVariants.regionX - width - 8))
-               : Math.max(8, Math.min(annotateVariants.regionX + (annotateVariants.regionW - width) / 2, overlayWin.width - width - 8))
+               ? (spaceRight >= 56 ? root.regionX + root.regionW + 8 : Math.max(8, root.regionX - width - 8))
+               : Math.max(8, Math.min(root.regionX + (root.regionW - width) / 2, overlayWin.width - width - 8))
             y: useVertical
-               ? Math.max(8, Math.min(annotateVariants.regionY + (annotateVariants.regionH - height) / 2, overlayWin.height - height - 8))
-               : (spaceBelow >= 56 ? annotateVariants.regionY + annotateVariants.regionH + 8 : Math.max(8, annotateVariants.regionY - height - 8))
+               ? Math.max(8, Math.min(root.regionY + (root.regionH - height) / 2, overlayWin.height - height - 8))
+               : (spaceBelow >= 56 ? root.regionY + root.regionH + 8 : Math.max(8, root.regionY - height - 8))
 
             radius: Style.radiusL
             color: Color.mSurface
             border.color: Style.capsuleBorderColor || "transparent"
             border.width: Style.capsuleBorderWidth || 1
 
-            // ── Shared toolbar content ─────────────────
-            // Single source of truth for all buttons — layout switches
-            // between Row (horizontal) and Column (vertical) via 'useVertical'.
             component ToolbarSeparator: Rectangle {
                 readonly property bool vertical: toolbar.useVertical
                 width:  vertical ? 28 : 1
@@ -552,14 +545,12 @@ Variants {
                 anchors.verticalCenter:   vertical ? undefined : parent.verticalCenter
             }
 
-            // The actual content item — switches Row/Column via Loader
             Loader {
                 id: toolbarContent
                 anchors.centerIn: parent
                 sourceComponent: toolbar.useVertical ? colLayout : rowLayout
             }
 
-            // ── Tool button definitions (shared) ───────
             readonly property var toolDefs: [
                 { id: "pencil", icon: "pencil",         tooltip: "Draw freehand"  },
                 { id: "arrow",  icon: "arrow-up-right", tooltip: "Draw arrow"      },
@@ -571,23 +562,21 @@ Variants {
             readonly property var colorDefs: ["#FF4444","#FF8C00","#FFD700","#44FF88","#44AAFF","#CC44FF","#FF44CC","#FFFFFF","#000000"]
             readonly property var sizeDefs:  [{ size: 2, label: "S" }, { size: 4, label: "M" }, { size: 7, label: "L" }]
 
-            // ── Shared action functions ────────────────
             function doUndo()  { if (overlayWin.strokes.length > 0) { overlayWin.strokes = overlayWin.strokes.slice(0, -1); drawCanvas.requestPaint() } }
             function doClear() { overlayWin.strokes = []; drawCanvas.requestPaint() }
-            function doClose() { overlayWin.strokes = []; annotateVariants.hide() }
+            function doClose() { overlayWin.strokes = []; root.hide() }
 
-            // ── Reusable button components ─────────────
             component ToolBtn: Rectangle {
                 property string toolId: ""
                 property string iconName: ""
                 property string tip: ""
                 width: 34; height: 34; radius: Style.radiusS
-                opacity: annotateVariants.zoomScale > 1.0 ? 0.35 : 1.0
+                opacity: root.zoomScale > 1.0 ? 0.35 : 1.0
                 color: overlayWin.tool === toolId ? Color.mPrimary : (tbHover.containsMouse ? Color.mHover : "transparent")
                 NIcon { anchors.centerIn: parent; icon: iconName; color: overlayWin.tool === toolId ? Color.mOnPrimary : Color.mOnSurface }
                 MouseArea {
                     id: tbHover; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                    enabled: annotateVariants.zoomScale <= 1.0
+                    enabled: root.zoomScale <= 1.0
                     onClicked: { if (overlayWin.textMode) textInput.commitText(); overlayWin.tool = toolId; overlayWin.textMode = false }
                     onEntered: TooltipService.show(parent, tip)
                     onExited:  TooltipService.hide()
@@ -644,7 +633,6 @@ Variants {
                     onExited:  TooltipService.hide() }
             }
 
-            // ── Row layout (horizontal) ────────────────
             Component {
                 id: rowLayout
                 Row {
@@ -659,20 +647,20 @@ Variants {
 
                     ZoomBtn {
                         iconName: "zoom-out"; tip: "Zoom out"
-                        btnEnabled: annotateVariants.zoomScale > 1.0
-                        onClicked: overlayWin.requestZoom(Math.max(1.0, annotateVariants.zoomScale - 1.0))
+                        btnEnabled: root.zoomScale > 1.0
+                        onClicked: overlayWin.requestZoom(Math.max(1.0, root.zoomScale - 1.0))
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: annotateVariants.zoomScale === 1.0 ? "1×" : Math.round(annotateVariants.zoomScale) + "×"
-                        color: annotateVariants.zoomScale > 1.0 ? Color.mPrimary : Color.mOnSurfaceVariant
-                        font.pixelSize: 11; font.bold: annotateVariants.zoomScale > 1.0
+                        text: root.zoomScale === 1.0 ? "1×" : Math.round(root.zoomScale) + "×"
+                        color: root.zoomScale > 1.0 ? Color.mPrimary : Color.mOnSurfaceVariant
+                        font.pixelSize: 11; font.bold: root.zoomScale > 1.0
                         width: 22; horizontalAlignment: Text.AlignHCenter
                     }
                     ZoomBtn {
                         iconName: "zoom-in"; tip: "Zoom in (view only)"
-                        btnEnabled: annotateVariants.zoomScale < 5.0
-                        onClicked: overlayWin.requestZoom(Math.min(5.0, annotateVariants.zoomScale + 1.0))
+                        btnEnabled: root.zoomScale < 5.0
+                        onClicked: overlayWin.requestZoom(Math.min(5.0, root.zoomScale + 1.0))
                     }
 
                     ToolbarSeparator {}
@@ -687,7 +675,8 @@ Variants {
                         Behavior on scale { NumberAnimation { duration: 80 } }
                         MouseArea { id: colorBtnH; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: overlayWin.showPopover = !overlayWin.showPopover
-                            onEntered: TooltipService.show(parent, annotateVariants._tr("annotate.colorSize")); onExited: TooltipService.hide() }
+                            onEntered: TooltipService.show(parent, root.mainInstance?.pluginApi?.tr("annotate.colorSize"))
+                            onExited: TooltipService.hide() }
                     }
 
                     ToolbarSeparator {}
@@ -700,7 +689,6 @@ Variants {
                 }
             }
 
-            // ── Column layout (vertical) ───────────────
             Component {
                 id: colLayout
                 Column {
@@ -715,19 +703,19 @@ Variants {
 
                     ZoomBtn {
                         iconName: "zoom-out"; tip: "Zoom out"
-                        btnEnabled: annotateVariants.zoomScale > 1.0
-                        onClicked: overlayWin.requestZoom(Math.max(1.0, annotateVariants.zoomScale - 1.0))
+                        btnEnabled: root.zoomScale > 1.0
+                        onClicked: overlayWin.requestZoom(Math.max(1.0, root.zoomScale - 1.0))
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: annotateVariants.zoomScale === 1.0 ? "1×" : Math.round(annotateVariants.zoomScale) + "×"
-                        color: annotateVariants.zoomScale > 1.0 ? Color.mPrimary : Color.mOnSurfaceVariant
-                        font.pixelSize: 10; font.bold: annotateVariants.zoomScale > 1.0
+                        text: root.zoomScale === 1.0 ? "1×" : Math.round(root.zoomScale) + "×"
+                        color: root.zoomScale > 1.0 ? Color.mPrimary : Color.mOnSurfaceVariant
+                        font.pixelSize: 10; font.bold: root.zoomScale > 1.0
                     }
                     ZoomBtn {
                         iconName: "zoom-in"; tip: "Zoom in (view only)"
-                        btnEnabled: annotateVariants.zoomScale < 5.0
-                        onClicked: overlayWin.requestZoom(Math.min(5.0, annotateVariants.zoomScale + 1.0))
+                        btnEnabled: root.zoomScale < 5.0
+                        onClicked: overlayWin.requestZoom(Math.min(5.0, root.zoomScale + 1.0))
                     }
 
                     ToolbarSeparator {}
@@ -742,7 +730,8 @@ Variants {
                         Behavior on scale { NumberAnimation { duration: 80 } }
                         MouseArea { id: colorBtnV; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: overlayWin.showPopover = !overlayWin.showPopover
-                            onEntered: TooltipService.show(parent, annotateVariants._tr("annotate.colorSize")); onExited: TooltipService.hide() }
+                            onEntered: TooltipService.show(parent, root.mainInstance?.pluginApi?.tr("annotate.colorSize"))
+                            onExited: TooltipService.hide() }
                     }
 
                     ToolbarSeparator {}
@@ -775,7 +764,6 @@ Variants {
                ? Math.max(8, Math.min(toolbar.y + (toolbar.height - height) / 2, overlayWin.height - height - 8))
                : (toolbar.spaceAbove >= height + 10 ? toolbar.y - height - 6 : toolbar.y + toolbar.height + 6)
 
-            // Single popover content — direction doesn't affect the items, only layout
             Loader {
                 id: popContent
                 anchors.centerIn: parent
@@ -864,21 +852,25 @@ Variants {
             var ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
             var filename = "annotate-" + ts + ".png"
             saveFileProc.savedPath = filename
-            if (annotateVariants.zoomScale > 1.0) {
+            if (root.zoomScale > 1.0) {
                 saveFileProc.exec({ command: [
                     "bash", "-c",
                     "DEST=$([ -d \"$HOME/Pictures/Screenshots\" ] && echo \"$HOME/Pictures/Screenshots\" || echo \"$HOME/Pictures\"); " +
-                    "cp " + annotateVariants.imagePath + " \"$DEST/" + filename + "\" && echo \"$DEST\""
+                    "cp " + root.imagePath + " \"$DEST/" + filename + "\" && echo \"$DEST\""
                 ]})
             } else {
+                var dpr = overlayWin.screen?.devicePixelRatio ?? 1.0
+                var pw = Math.round(root.regionW * dpr)
+                var ph = Math.round(root.regionH * dpr)
                 drawCanvas.grabToImage(function(result) {
                     result.saveToFile("/tmp/screen-toolkit-overlay.png")
                     saveFileProc.exec({ command: [
                         "bash", "-c",
                         "DEST=$([ -d \"$HOME/Pictures/Screenshots\" ] && echo \"$HOME/Pictures/Screenshots\" || echo \"$HOME/Pictures\"); " +
-                        "magick /tmp/screen-toolkit-annotate.png /tmp/screen-toolkit-overlay.png " +
+                        "magick /tmp/screen-toolkit-overlay.png -resize " + pw + "x" + ph + "! /tmp/screen-toolkit-overlay-hires.png && " +
+                        "magick /tmp/screen-toolkit-annotate.png /tmp/screen-toolkit-overlay-hires.png " +
                         "-composite \"$DEST/" + filename + "\" && " +
-                        "rm -f /tmp/screen-toolkit-overlay.png && echo \"$DEST\""
+                        "rm -f /tmp/screen-toolkit-overlay.png /tmp/screen-toolkit-overlay-hires.png && echo \"$DEST\""
                     ]})
                 })
             }
@@ -887,17 +879,21 @@ Variants {
         function flattenAndCopy() {
             if (overlayWin.isSaving) return
             overlayWin.isSaving = true
-            if (annotateVariants.zoomScale > 1.0) {
-                copyProc.exec({ command: ["bash", "-c", "wl-copy < " + annotateVariants.imagePath] })
+            if (root.zoomScale > 1.0) {
+                copyProc.exec({ command: ["bash", "-c", "wl-copy < " + root.imagePath] })
             } else {
+                var dpr = overlayWin.screen?.devicePixelRatio ?? 1.0
+                var pw = Math.round(root.regionW * dpr)
+                var ph = Math.round(root.regionH * dpr)
                 drawCanvas.grabToImage(function(result) {
                     result.saveToFile("/tmp/screen-toolkit-overlay.png")
                     saveProc.exec({ command: [
                         "bash", "-c",
-                        "magick /tmp/screen-toolkit-annotate.png /tmp/screen-toolkit-overlay.png " +
+                        "magick /tmp/screen-toolkit-overlay.png -resize " + pw + "x" + ph + "! /tmp/screen-toolkit-overlay-hires.png && " +
+                        "magick /tmp/screen-toolkit-annotate.png /tmp/screen-toolkit-overlay-hires.png " +
                         "-composite /tmp/screen-toolkit-annotated.png && " +
                         "wl-copy < /tmp/screen-toolkit-annotated.png && " +
-                        "rm -f /tmp/screen-toolkit-overlay.png"
+                        "rm -f /tmp/screen-toolkit-overlay.png /tmp/screen-toolkit-overlay-hires.png"
                     ]})
                 })
             }

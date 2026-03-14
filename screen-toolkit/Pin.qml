@@ -6,13 +6,9 @@ import qs.Widgets
 import qs.Services.UI
 
 Variants {
-    id: pinVariants
+    id: root
 
     property var pluginApi: null
-
-    function _tr(key) {
-        return pinVariants.pluginApi?.tr(key) ?? key
-    }
 
     property var pins: []
     readonly property bool hasPins: pins.length > 0
@@ -42,7 +38,7 @@ Variants {
 
         anchors { top: true; bottom: true; left: true; right: true }
         color: "transparent"
-        visible: pinVariants.hasPins
+        visible: root.hasPins
 
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -50,22 +46,21 @@ Variants {
         WlrLayershell.namespace: "noctalia-pin"
 
         Repeater {
-            model: pinVariants.pins.length
+            model: root.pins.length
 
             delegate: Item {
                 id: pinDelegate
 
                 readonly property int myIdx: index
-                readonly property string pinImgPath: pinVariants.pinField(myIdx, "imgPath") || ""
-                readonly property real pinW: pinVariants.pinField(myIdx, "w") || 400
-                readonly property real pinH: pinVariants.pinField(myIdx, "h") || 300
+                readonly property string pinImgPath: root.pinField(myIdx, "imgPath") || ""
+                readonly property real pinW: root.pinField(myIdx, "w") || 400
+                readonly property real pinH: root.pinField(myIdx, "h") || 300
 
                 x: (parent.width  - pinW)  / 2 + myIdx * 24
                 y: (parent.height - pinH)   / 2 + myIdx * 24
                 width:  pinW
                 height: pinH
 
-                // Hover state for showing close button
                 property bool _hovered: false
 
                 Rectangle {
@@ -77,7 +72,6 @@ Variants {
                     border.width: 1
                     clip: true
 
-                    // ── Image fills entire card ────────────────
                     Image {
                         anchors.fill: parent
                         source: pinDelegate.pinImgPath !== "" ? "file://" + pinDelegate.pinImgPath : ""
@@ -85,7 +79,6 @@ Variants {
                         smooth: true
                     }
 
-                    // ── Drag + hover detection ─────────────────
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
@@ -99,7 +92,6 @@ Variants {
                         onExited: { if (!closeBtn.containsMouse) pinDelegate._hovered = false }
                     }
 
-                    // ── Close button — top right on hover ──────
                     Rectangle {
                         anchors { top: parent.top; right: parent.right; margins: 8 }
                         width: 24; height: 24; radius: 12
@@ -115,8 +107,8 @@ Variants {
                         MouseArea {
                             id: closeBtn; anchors.fill: parent; hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: pinVariants.removePin(pinDelegate.myIdx)
-                            onEntered: { pinDelegate._hovered = true; TooltipService.show(closeBtn, pinVariants._tr("pin.close")) }
+                            onClicked: root.removePin(pinDelegate.myIdx)
+                            onEntered: { pinDelegate._hovered = true; TooltipService.show(closeBtn, root.pluginApi?.tr("pin.close")) }
                             onExited: { pinDelegate._hovered = false; TooltipService.hide() }
                         }
                     }

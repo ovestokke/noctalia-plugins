@@ -11,10 +11,6 @@ Item {
 
     property var pluginApi: null
 
-    function _tr(key, interp) {
-        return root.pluginApi?.tr(key, interp ?? {}) ?? key
-    }
-
     property string region: ""
     property string mp4Path: ""
     property string gifPath: ""
@@ -33,9 +29,6 @@ Item {
     property bool audioOutput: false
     property bool audioInput: false
 
-    // ── Preview capture guard ─────────────────────────────────
-    // Prevents stacking grim processes when a capture takes longer
-    // than the 150 ms timer interval (e.g. on large regions or slow GPU).
     property bool _previewBusy: false
 
     function startRecording(regionStr, fmt, audOut, audIn) {
@@ -67,7 +60,6 @@ Item {
         elapsedTimer.start()
         previewTimer.start()
 
-        // Kick off the first preview frame immediately
         _capturePreview()
 
         wfRecorderProc.exec({ command: [
@@ -111,7 +103,6 @@ Item {
         return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
     }
 
-    // ── Internal: single preview capture ─────────────────────
     function _capturePreview() {
         if (root._previewBusy || !root.isRecording) return
         root._previewBusy = true
@@ -170,7 +161,7 @@ Item {
                 }
             } else {
                 root.dismiss()
-                ToastService.showError(root._tr("record.failed"))
+                ToastService.showError(root.pluginApi?.tr("record.failed"))
             }
         }
     }
@@ -186,7 +177,7 @@ Item {
                 root.isDone = true
             } else {
                 root.dismiss()
-                ToastService.showError(root.format === "mp4" ? root._tr("record.saveMp4Failed") : root._tr("record.saveGifFailed"))
+                ToastService.showError(root.format === "mp4" ? root.pluginApi?.tr("record.saveMp4Failed") : root.pluginApi?.tr("record.saveGifFailed"))
             }
         }
     }
@@ -195,8 +186,8 @@ Item {
         id: saveProc
         property string savedPath: ""
         onExited: (code) => {
-            if (code === 0) ToastService.showNotice(root._tr("record.saved"), saveProc.savedPath, "device-floppy")
-            else ToastService.showError(root.format === "mp4" ? root._tr("record.saveMp4Failed") : root._tr("record.saveGifFailed"))
+            if (code === 0) ToastService.showNotice(root.pluginApi?.tr("record.saved"), saveProc.savedPath, "device-floppy")
+            else ToastService.showError(root.format === "mp4" ? root.pluginApi?.tr("record.saveMp4Failed") : root.pluginApi?.tr("record.saveGifFailed"))
             root.dismiss()
         }
     }
@@ -361,7 +352,7 @@ Item {
                                         }
                                     }
                                     NText {
-                                        text: root.format === "mp4" ? root._tr("record.savingMp4") : root._tr("record.convertingGif")
+                                        text: root.format === "mp4" ? root.pluginApi?.tr("record.savingMp4") : root.pluginApi?.tr("record.convertingGif")
                                         color: "white"; pointSize: Style.fontSizeXS
                                         anchors.horizontalCenter: parent.horizontalCenter
                                     }
@@ -378,7 +369,7 @@ Item {
                                     anchors.centerIn: parent; spacing: 4
                                     NIcon { icon: "circle-check"; color: Color.mPrimary; scale: 0.75 }
                                     NText {
-                                        text: root.format === "mp4" ? root._tr("record.mp4Ready") : root._tr("record.gifReady")
+                                        text: root.format === "mp4" ? root.pluginApi?.tr("record.mp4Ready") : root.pluginApi?.tr("record.gifReady")
                                         color: "white"; font.weight: Font.Bold; pointSize: Style.fontSizeXS
                                     }
                                 }
@@ -400,7 +391,7 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                                 NText {
-                                    text: root._tr("record.stop")
+                                    text: root.pluginApi?.tr("record.stop")
                                     color: stopBtn.containsMouse ? "white" : Color.mOnSurface
                                     font.weight: Font.Bold; pointSize: Style.fontSizeS
                                 }
@@ -425,7 +416,7 @@ Item {
                                     anchors.centerIn: parent; spacing: Style.marginS
                                     NIcon { icon: "device-floppy"; color: saveBtn.containsMouse ? Color.mOnPrimary : Color.mOnSurface }
                                     NText {
-                                        text: root.format === "mp4" ? root._tr("record.saveMp4") : root._tr("record.saveGif")
+                                        text: root.format === "mp4" ? root.pluginApi?.tr("record.saveMp4") : root.pluginApi?.tr("record.saveGif")
                                         color: saveBtn.containsMouse ? Color.mOnPrimary : Color.mOnSurface
                                         font.weight: Font.Bold; pointSize: Style.fontSizeS
                                     }
@@ -454,7 +445,7 @@ Item {
                                 MouseArea {
                                     id: discardBtn; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                     onClicked: root.dismiss()
-                                    onEntered: TooltipService.show(discardBtn, root._tr("record.discard"))
+                                    onEntered: TooltipService.show(discardBtn, root.pluginApi?.tr("record.discard"))
                                     onExited:  TooltipService.hide()
                                 }
                             }

@@ -9,7 +9,7 @@ NIconButton {
     property ShellScreen screen
     property var pluginApi: null
     icon: "crosshair"
-    tooltipText: pluginApi?.tr("widget.tooltip") || "Screen Toolkit"
+    tooltipText: pluginApi?.tr("widget.tooltip")
     tooltipDirection: BarService.getTooltipDirection(screen?.name)
     colorBg: Style.capsuleColor
     colorBorder: "transparent"
