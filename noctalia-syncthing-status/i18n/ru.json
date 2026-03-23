@@ -12,10 +12,10 @@
     },
     "summary": {
         "disabled": "Опрос плагина отключён",
-        "idle-devices": "%1/%2 устройств подключено",
+        "idle-devices": "{connected}/{configured} устройств подключено",
         "idle-no-devices": "Удалённые устройства не настроены",
-        "syncing-items": "%1 элементов в ожидании",
-        "syncing-folders": "%1 папок активно",
+        "syncing-items": "{count} элементов в ожидании",
+        "syncing-folders": "{count} папок активно",
         "paused": "Все отслеживаемые папки приостановлены",
         "disconnected": "Нет подключённых удалённых устройств",
         "offline": "Syncthing GUI/API недоступен",
@@ -27,7 +27,8 @@
         "enable": "Включить Syncthing Status",
         "disable": "Отключить Syncthing Status",
         "refresh": "Обновить сейчас",
-        "settings": "Настройки"
+        "settings": "Настройки",
+        "tooltip": "Syncthing - {state}\n{summary}"
     },
     "panel": {
         "title": "Syncthing",
@@ -38,11 +39,11 @@
         "no-folders": "Нет отслеживаемых папок",
         "details": "Подробности",
         "recent-errors": "Недавние ошибки",
-        "last-check": "Последняя проверка",
-        "url": "GUI URL",
-        "config-path": "Путь к конфигурации",
-        "api-source": "Источник API key",
-        "folder-state": "%1  (%2 элементов)"
+        "last-check-info": "Последняя проверка: {value}",
+        "url-info": "GUI URL: {value}",
+        "config-path-info": "Путь к конфигурации: {value}",
+        "api-source-info": "Источник API key: {value}",
+        "folder-state": "{state} ({count} элементов)"
     },
     "settings": {
         "enabled": "Включить плагин",
@@ -55,7 +56,7 @@
         "config-path-desc": "Необязательный путь к config.xml Syncthing для автоопределения",
         "verify-tls": "Проверять сертификаты TLS",
         "verify-tls-desc": "Включайте только если HTTPS-сертификат Syncthing является доверенным",
-        "poll-interval": "Интервал опроса",
+        "poll-interval-label": "Интервал опроса: {value}с",
         "poll-interval-desc": "Как часто плагин обновляет статус Syncthing",
         "folders": "Отслеживаемые папки",
         "folders-desc": "Если ничего не выбрано, плагин отслеживает все настроенные папки",
@@ -64,6 +65,8 @@
         "saved": "Сохранено",
         "refresh": "Обновить сейчас",
         "status": "Текущий статус",
+        "url-info": "URL: {value}",
+        "api-source-info": "API: {value}",
         "about": "О плагине",
         "developer": "Разработано Pir0c0pter0"
     },

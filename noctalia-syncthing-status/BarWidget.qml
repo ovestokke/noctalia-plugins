@@ -50,8 +50,11 @@ Item {
 
     function tooltipText() {
         if (!mainInst) return "Syncthing";
-        return "Syncthing - " + mainInst.stateLabel(mainInst.enabled ? mainInst.state : "disabled")
-            + "\n" + mainInst.statusSummary();
+        const stateCode = mainInst.enabled ? mainInst.state : "disabled";
+        return pluginApi?.tr("bar.tooltip", {
+            "state": mainInst.stateLabel(stateCode),
+            "summary": mainInst.statusSummary()
+        });
     }
 
     NPopupContextMenu {
@@ -103,7 +106,7 @@ Item {
         Row {
             id: iconRow
             anchors.centerIn: parent
-            spacing: badge ? 4 : 0
+            spacing: badge ? Style.marginXS : 0
 
             Image {
                 width: root.capsuleHeight * 0.55
@@ -134,10 +137,10 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             anchors.right: parent.right
-            anchors.bottomMargin: 2
-            anchors.rightMargin: 2
-            width: root.statusBadgeIcon ? 14 : 8
-            height: root.statusBadgeIcon ? 14 : 8
+            anchors.bottomMargin: Style.marginXXS
+            anchors.rightMargin: Style.marginXXS
+            width: Math.round((root.statusBadgeIcon ? 14 : 8) * Style.uiScaleRatio)
+            height: Math.round((root.statusBadgeIcon ? 14 : 8) * Style.uiScaleRatio)
             radius: width / 2
             color: root.statusBadgeBg
 
@@ -145,7 +148,7 @@ Item {
                 anchors.centerIn: parent
                 visible: root.statusBadgeIcon !== ""
                 icon: root.statusBadgeIcon
-                pointSize: 8
+                pointSize: Style.fontSizeXXS
                 color: root.statusBadgeFg
             }
         }

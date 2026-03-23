@@ -18,14 +18,14 @@ Item {
     readonly property var mainInst: pluginApi?.mainInstance ?? null
     readonly property string currentState: mainInst?.enabled ? (mainInst?.state ?? "unconfigured") : "disabled"
 
-    function tr(key) {
-        return pluginApi?.tr(key);
+    function tr(key, params) {
+        return pluginApi?.tr(key, params);
     }
 
     function folderStateText(folder) {
         if (!mainInst) return "";
         if (folder.state === "syncing" && folder.needItems > 0) {
-            return (tr("panel.folder-state") ?? "%1 (%2)").arg(mainInst.stateLabel(folder.state)).arg(folder.needItems);
+            return tr("panel.folder-state", { "state": mainInst.stateLabel(folder.state), "count": folder.needItems });
         }
         return mainInst.stateLabel(folder.state);
     }
@@ -55,8 +55,8 @@ Item {
                         spacing: Style.marginS
 
                         Image {
-                            width: 22 * Style.uiScaleRatio
-                            height: 22 * Style.uiScaleRatio
+                            width: Math.round(22 * Style.uiScaleRatio)
+                            height: Math.round(22 * Style.uiScaleRatio)
                             source: Qt.resolvedUrl("icon.svg")
                             sourceSize: Qt.size(width, height)
                             fillMode: Image.PreserveAspectFit
@@ -71,7 +71,7 @@ Item {
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 2
+                            spacing: Style.marginXXS
 
                             NText {
                                 text: tr("panel.title")
@@ -88,8 +88,8 @@ Item {
                         }
 
                         Rectangle {
-                            Layout.preferredWidth: refreshLabel.width + 22
-                            Layout.preferredHeight: 30
+                            Layout.preferredWidth: refreshLabel.width + Math.round(22 * Style.uiScaleRatio)
+                            Layout.preferredHeight: Math.round(30 * Style.uiScaleRatio)
                             radius: Style.radiusM
                             color: refreshMouse.containsMouse ? Qt.darker(Color.mPrimary, 1.1) : Color.mPrimary
 
@@ -115,8 +115,8 @@ Item {
                         spacing: Style.marginS
 
                         Rectangle {
-                            width: (mainInst?.statusBadgeIcon(root.currentState) ?? "") !== "" ? 18 : 10
-                            height: (mainInst?.statusBadgeIcon(root.currentState) ?? "") !== "" ? 18 : 10
+                            width: Math.round(((mainInst?.statusBadgeIcon(root.currentState) ?? "") !== "" ? 18 : 10) * Style.uiScaleRatio)
+                            height: Math.round(((mainInst?.statusBadgeIcon(root.currentState) ?? "") !== "" ? 18 : 10) * Style.uiScaleRatio)
                             radius: width / 2
                             color: mainInst ? mainInst.statusBadgeBackground(root.currentState) : Color.mOutline
 
@@ -124,7 +124,7 @@ Item {
                                 anchors.centerIn: parent
                                 visible: (mainInst?.statusBadgeIcon(root.currentState) ?? "") !== ""
                                 icon: mainInst?.statusBadgeIcon(root.currentState) ?? ""
-                                pointSize: 9
+                                pointSize: Style.fontSizeXXS
                                 color: mainInst ? mainInst.statusBadgeForeground(root.currentState) : Color.mOnSurface
                             }
                         }
@@ -163,13 +163,13 @@ Item {
                             delegate: Rectangle {
                                 required property var modelData
                                 Layout.fillWidth: true
-                                implicitHeight: 68
+                                implicitHeight: Math.round(68 * Style.uiScaleRatio)
                                 radius: Style.iRadiusM
                                 color: Color.mSurfaceVariant
 
                                 Column {
                                     anchors.centerIn: parent
-                                    spacing: 4
+                                    spacing: Style.marginXS
 
                                     NText {
                                         anchors.horizontalCenter: parent.horizontalCenter
@@ -206,11 +206,11 @@ Item {
                             delegate: Rectangle {
                                 required property var modelData
                                 Layout.fillWidth: true
-                                implicitHeight: 46
+                                implicitHeight: Math.round(46 * Style.uiScaleRatio)
                                 radius: Style.iRadiusM
                                 color: Color.mSurfaceVariant
                                 border.color: Qt.alpha(mainInst?.statusColor(modelData.state) ?? Color.mOutline, 0.5)
-                                border.width: 1
+                                border.width: Style.borderS
 
                                 RowLayout {
                                     anchors.fill: parent
@@ -218,15 +218,15 @@ Item {
                                     spacing: Style.marginS
 
                                     Rectangle {
-                                        width: 8
-                                        height: 8
-                                        radius: 4
+                                        width: Math.round(8 * Style.uiScaleRatio)
+                                        height: Math.round(8 * Style.uiScaleRatio)
+                                        radius: width / 2
                                         color: mainInst?.statusColor(modelData.state) ?? Color.mOutline
                                     }
 
                                     ColumnLayout {
                                         Layout.fillWidth: true
-                                        spacing: 2
+                                        spacing: Style.marginXXS
 
                                         NText {
                                             text: modelData.label
@@ -255,7 +255,7 @@ Item {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 4
+                        spacing: Style.marginXS
                         visible: !!(mainInst?.detail ?? "")
 
                         NText {
@@ -273,11 +273,11 @@ Item {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 4
+                        spacing: Style.marginXS
 
                         NText {
                             Layout.fillWidth: true
-                            text: tr("panel.last-check") + ": " + (mainInst?.formatCheckedAt(mainInst?.checkedAt ?? "") ?? "-")
+                            text: tr("panel.last-check-info", { "value": mainInst?.formatCheckedAt(mainInst?.checkedAt ?? "") ?? "-" })
                             pointSize: Style.fontSizeS
                             color: Qt.alpha(Color.mOnSurface, 0.65)
                             wrapMode: Text.WordWrap
@@ -285,7 +285,7 @@ Item {
 
                         NText {
                             Layout.fillWidth: true
-                            text: tr("panel.url") + ": " + (mainInst?.resolvedUrl || "-")
+                            text: tr("panel.url-info", { "value": mainInst?.resolvedUrl || "-" })
                             pointSize: Style.fontSizeS
                             color: Qt.alpha(Color.mOnSurface, 0.65)
                             wrapMode: Text.WrapAnywhere
@@ -293,7 +293,7 @@ Item {
 
                         NText {
                             Layout.fillWidth: true
-                            text: tr("panel.config-path") + ": " + (mainInst?.resolvedConfigPath || "-")
+                            text: tr("panel.config-path-info", { "value": mainInst?.resolvedConfigPath || "-" })
                             pointSize: Style.fontSizeS
                             color: Qt.alpha(Color.mOnSurface, 0.65)
                             wrapMode: Text.WrapAnywhere
@@ -301,7 +301,7 @@ Item {
 
                         NText {
                             Layout.fillWidth: true
-                            text: tr("panel.api-source") + ": " + (mainInst ? mainInst.sourceLabel(mainInst.apiKeySource) : "-")
+                            text: tr("panel.api-source-info", { "value": mainInst ? mainInst.sourceLabel(mainInst.apiKeySource) : "-" })
                             pointSize: Style.fontSizeS
                             color: Qt.alpha(Color.mOnSurface, 0.65)
                             wrapMode: Text.WordWrap
@@ -310,7 +310,7 @@ Item {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 4
+                        spacing: Style.marginXS
                         visible: (mainInst?.recentErrors?.length ?? 0) > 0
 
                         NText {

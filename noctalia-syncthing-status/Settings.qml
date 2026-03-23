@@ -24,12 +24,12 @@ ColumnLayout {
         }
     }
 
-    function tr(key) {
-        return pluginApi?.tr(key);
+    function tr(key, params) {
+        return pluginApi?.tr(key, params);
     }
 
     function sourceLabel(code) {
-        return mainInst?.sourceLabel(code) ?? code;
+        return mainInst?.sourceLabel(code);
     }
 
     function isFolderSelected(folderId) {
@@ -87,16 +87,16 @@ ColumnLayout {
 
         Rectangle {
             Layout.fillWidth: true
-            height: 36
+            height: Math.round(36 * Style.uiScaleRatio)
             radius: Style.radiusM
             color: Color.mSurfaceVariant
             border.color: urlField.activeFocus ? Color.mPrimary : Color.mOutline
-            border.width: 1
+            border.width: Style.borderS
 
             TextInput {
                 id: urlField
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.margins: Style.marginM
                 verticalAlignment: TextInput.AlignVCenter
                 color: Color.mOnSurface
                 selectionColor: Color.mPrimary
@@ -126,16 +126,16 @@ ColumnLayout {
 
         Rectangle {
             Layout.fillWidth: true
-            height: 36
+            height: Math.round(36 * Style.uiScaleRatio)
             radius: Style.radiusM
             color: Color.mSurfaceVariant
             border.color: apiField.activeFocus ? Color.mPrimary : Color.mOutline
-            border.width: 1
+            border.width: Style.borderS
 
             TextInput {
                 id: apiField
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.margins: Style.marginM
                 verticalAlignment: TextInput.AlignVCenter
                 color: Color.mOnSurface
                 selectionColor: Color.mPrimary
@@ -166,16 +166,16 @@ ColumnLayout {
 
         Rectangle {
             Layout.fillWidth: true
-            height: 36
+            height: Math.round(36 * Style.uiScaleRatio)
             radius: Style.radiusM
             color: Color.mSurfaceVariant
             border.color: pathField.activeFocus ? Color.mPrimary : Color.mOutline
-            border.width: 1
+            border.width: Style.borderS
 
             TextInput {
                 id: pathField
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.margins: Style.marginM
                 verticalAlignment: TextInput.AlignVCenter
                 color: Color.mOnSurface
                 selectionColor: Color.mPrimary
@@ -207,7 +207,7 @@ ColumnLayout {
         spacing: Style.marginS
 
         NLabel {
-            label: (tr("settings.poll-interval") ?? "Poll interval") + ": " + Math.round(root.valuePollIntervalMs / 1000) + "s"
+            label: tr("settings.poll-interval-label", { "value": Math.round(root.valuePollIntervalMs / 1000) })
             description: tr("settings.poll-interval-desc")
         }
 
@@ -241,12 +241,12 @@ ColumnLayout {
                     required property var modelData
                     readonly property bool isSelected: root.isFolderSelected(modelData.id)
 
-                    width: chipLabel.implicitWidth + 22
-                    height: 30
-                    radius: 15
+                    width: chipLabel.implicitWidth + Math.round(22 * Style.uiScaleRatio)
+                    height: Math.round(30 * Style.uiScaleRatio)
+                    radius: height / 2
                     color: isSelected ? Qt.alpha(Color.mPrimary, 0.15) : Color.mSurfaceVariant
                     border.color: isSelected ? Color.mPrimary : Color.mOutline
-                    border.width: 1
+                    border.width: Style.borderS
 
                     NText {
                         id: chipLabel
@@ -279,8 +279,8 @@ ColumnLayout {
         spacing: Style.marginS
 
         Rectangle {
-            Layout.preferredWidth: saveLabel.width + 24
-            Layout.preferredHeight: 32
+            Layout.preferredWidth: saveLabel.width + Math.round(24 * Style.uiScaleRatio)
+            Layout.preferredHeight: Math.round(32 * Style.uiScaleRatio)
             radius: Style.radiusM
             color: saveMouse.containsMouse ? Qt.darker(Color.mPrimary, 1.1) : Color.mPrimary
 
@@ -298,19 +298,19 @@ ColumnLayout {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     root.saveSettings(false);
-                    saveStatus.text = tr("settings.saved") ?? "Saved";
+                    saveStatus.text = tr("settings.saved");
                     saveStatusTimer.restart();
                 }
             }
         }
 
         Rectangle {
-            Layout.preferredWidth: refreshLabel.width + 24
-            Layout.preferredHeight: 32
+            Layout.preferredWidth: refreshLabel.width + Math.round(24 * Style.uiScaleRatio)
+            Layout.preferredHeight: Math.round(32 * Style.uiScaleRatio)
             radius: Style.radiusM
             color: refreshMouse.containsMouse ? Color.mOutline : Color.mSurfaceVariant
             border.color: Color.mOutline
-            border.width: 1
+            border.width: Style.borderS
 
             NText {
                 id: refreshLabel
@@ -325,7 +325,7 @@ ColumnLayout {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     root.saveSettings(true);
-                    saveStatus.text = tr("settings.saved") ?? "Saved";
+                    saveStatus.text = tr("settings.saved");
                     saveStatusTimer.restart();
                 }
             }
@@ -347,7 +347,7 @@ ColumnLayout {
     ColumnLayout {
         Layout.fillWidth: true
         Layout.topMargin: Style.marginM
-        spacing: 4
+        spacing: Style.marginXS
 
         NText {
             text: tr("settings.status")
@@ -366,14 +366,14 @@ ColumnLayout {
         }
 
         NText {
-            text: (tr("panel.url") ?? "URL") + ": " + (mainInst?.resolvedUrl || "-")
+            text: tr("settings.url-info", { "value": mainInst?.resolvedUrl || "-" })
             pointSize: Style.fontSizeS
             color: Qt.alpha(Color.mOnSurface, 0.6)
             elide: Text.ElideRight
         }
 
         NText {
-            text: (tr("panel.api-source") ?? "API") + ": " + root.sourceLabel(mainInst?.apiKeySource ?? "none")
+            text: tr("settings.api-source-info", { "value": root.sourceLabel(mainInst?.apiKeySource ?? "none") })
             pointSize: Style.fontSizeS
             color: Qt.alpha(Color.mOnSurface, 0.6)
         }
@@ -382,7 +382,7 @@ ColumnLayout {
     ColumnLayout {
         Layout.fillWidth: true
         Layout.topMargin: Style.marginM
-        spacing: 4
+        spacing: Style.marginXS
 
         NText {
             text: tr("settings.about")

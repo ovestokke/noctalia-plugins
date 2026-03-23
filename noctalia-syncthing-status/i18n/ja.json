@@ -12,10 +12,10 @@
     },
     "summary": {
         "disabled": "プラグインのポーリングは無効です",
-        "idle-devices": "%1/%2 台のデバイスが接続中",
+        "idle-devices": "{connected}/{configured} 台のデバイスが接続中",
         "idle-no-devices": "リモートデバイスが設定されていません",
-        "syncing-items": "%1 件のアイテムが保留中",
-        "syncing-folders": "%1 個のフォルダが同期中",
+        "syncing-items": "{count} 件のアイテムが保留中",
+        "syncing-folders": "{count} 個のフォルダが同期中",
         "paused": "監視中のすべてのフォルダが一時停止しています",
         "disconnected": "接続されているリモートデバイスがありません",
         "offline": "Syncthing GUI/API に到達できません",
@@ -27,7 +27,8 @@
         "enable": "Syncthing Status を有効化",
         "disable": "Syncthing Status を無効化",
         "refresh": "今すぐ更新",
-        "settings": "設定"
+        "settings": "設定",
+        "tooltip": "Syncthing - {state}\n{summary}"
     },
     "panel": {
         "title": "Syncthing",
@@ -38,11 +39,11 @@
         "no-folders": "監視中のフォルダはありません",
         "details": "詳細",
         "recent-errors": "最近のエラー",
-        "last-check": "最終確認",
-        "url": "GUI URL",
-        "config-path": "設定ファイルパス",
-        "api-source": "API key のソース",
-        "folder-state": "%1  (%2 アイテム)"
+        "last-check-info": "最終確認: {value}",
+        "url-info": "GUI URL: {value}",
+        "config-path-info": "設定ファイルパス: {value}",
+        "api-source-info": "API key のソース: {value}",
+        "folder-state": "{state}（{count} アイテム）"
     },
     "settings": {
         "enabled": "プラグインを有効化",
@@ -55,7 +56,7 @@
         "config-path-desc": "自動検出用の Syncthing config.xml へのパス（省略可）",
         "verify-tls": "TLS 証明書を検証",
         "verify-tls-desc": "Syncthing の HTTPS 証明書が信頼済みの場合のみ有効にしてください",
-        "poll-interval": "ポーリング間隔",
+        "poll-interval-label": "ポーリング間隔: {value}秒",
         "poll-interval-desc": "プラグインが Syncthing のステータスを更新する頻度",
         "folders": "監視フォルダ",
         "folders-desc": "未選択の場合、設定されたすべてのフォルダを監視します",
@@ -64,6 +65,8 @@
         "saved": "保存しました",
         "refresh": "今すぐ更新",
         "status": "現在のステータス",
+        "url-info": "URL: {value}",
+        "api-source-info": "API: {value}",
         "about": "このプラグインについて",
         "developer": "Pir0c0pter0 が開発"
     },

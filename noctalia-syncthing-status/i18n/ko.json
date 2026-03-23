@@ -12,10 +12,10 @@
     },
     "summary": {
         "disabled": "플러그인 폴링이 비활성화되어 있습니다",
-        "idle-devices": "%1/%2 기기 연결됨",
+        "idle-devices": "{connected}/{configured} 기기 연결됨",
         "idle-no-devices": "구성된 원격 기기가 없습니다",
-        "syncing-items": "%1개 항목 대기 중",
-        "syncing-folders": "%1개 폴더 동기화 중",
+        "syncing-items": "{count}개 항목 대기 중",
+        "syncing-folders": "{count}개 폴더 동기화 중",
         "paused": "모니터링 중인 모든 폴더가 일시 중지되었습니다",
         "disconnected": "연결된 원격 기기가 없습니다",
         "offline": "Syncthing GUI/API에 접근할 수 없습니다",
@@ -27,7 +27,8 @@
         "enable": "Syncthing Status 활성화",
         "disable": "Syncthing Status 비활성화",
         "refresh": "지금 새로고침",
-        "settings": "설정"
+        "settings": "설정",
+        "tooltip": "Syncthing - {state}\n{summary}"
     },
     "panel": {
         "title": "Syncthing",
@@ -38,11 +39,11 @@
         "no-folders": "모니터링 중인 폴더 없음",
         "details": "상세 정보",
         "recent-errors": "최근 오류",
-        "last-check": "마지막 확인",
-        "url": "GUI URL",
-        "config-path": "설정 파일 경로",
-        "api-source": "API key 출처",
-        "folder-state": "%1  (%2개 항목)"
+        "last-check-info": "마지막 확인: {value}",
+        "url-info": "GUI URL: {value}",
+        "config-path-info": "설정 파일 경로: {value}",
+        "api-source-info": "API key 출처: {value}",
+        "folder-state": "{state} ({count}개 항목)"
     },
     "settings": {
         "enabled": "플러그인 활성화",
@@ -55,7 +56,7 @@
         "config-path-desc": "자동 감지를 위한 Syncthing config.xml 경로 (선택 사항)",
         "verify-tls": "TLS 인증서 검증",
         "verify-tls-desc": "Syncthing HTTPS 인증서가 신뢰할 수 있는 경우에만 활성화하세요",
-        "poll-interval": "폴링 간격",
+        "poll-interval-label": "폴링 간격: {value}초",
         "poll-interval-desc": "플러그인이 Syncthing 상태를 갱신하는 주기",
         "folders": "모니터링 폴더",
         "folders-desc": "선택하지 않으면 구성된 모든 폴더를 모니터링합니다",
@@ -64,6 +65,8 @@
         "saved": "저장됨",
         "refresh": "지금 새로고침",
         "status": "현재 상태",
+        "url-info": "URL: {value}",
+        "api-source-info": "API: {value}",
         "about": "정보",
         "developer": "Pir0c0pter0 개발"
     },

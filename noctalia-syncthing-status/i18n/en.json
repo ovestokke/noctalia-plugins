@@ -12,10 +12,10 @@
     },
     "summary": {
         "disabled": "Plugin polling is disabled",
-        "idle-devices": "%1/%2 devices connected",
+        "idle-devices": "{connected}/{configured} devices connected",
         "idle-no-devices": "No remote devices configured",
-        "syncing-items": "%1 items pending",
-        "syncing-folders": "%1 folders active",
+        "syncing-items": "{count} items pending",
+        "syncing-folders": "{count} folders active",
         "paused": "All monitored folders are paused",
         "disconnected": "No remote devices connected",
         "offline": "Syncthing GUI/API is unreachable",
@@ -27,7 +27,8 @@
         "enable": "Enable Syncthing Status",
         "disable": "Disable Syncthing Status",
         "refresh": "Refresh now",
-        "settings": "Settings"
+        "settings": "Settings",
+        "tooltip": "Syncthing - {state}\n{summary}"
     },
     "panel": {
         "title": "Syncthing",
@@ -38,11 +39,11 @@
         "no-folders": "No monitored folders",
         "details": "Details",
         "recent-errors": "Recent errors",
-        "last-check": "Last check",
-        "url": "GUI URL",
-        "config-path": "Config path",
-        "api-source": "API key source",
-        "folder-state": "%1  (%2 items)"
+        "last-check-info": "Last check: {value}",
+        "url-info": "GUI URL: {value}",
+        "config-path-info": "Config path: {value}",
+        "api-source-info": "API key source: {value}",
+        "folder-state": "{state} ({count} items)"
     },
     "settings": {
         "enabled": "Enable plugin",
@@ -55,7 +56,7 @@
         "config-path-desc": "Optional path to Syncthing config.xml for autodetection",
         "verify-tls": "Verify TLS certificates",
         "verify-tls-desc": "Enable this only if your Syncthing HTTPS certificate is trusted",
-        "poll-interval": "Poll interval",
+        "poll-interval-label": "Poll interval: {value}s",
         "poll-interval-desc": "How often the plugin refreshes Syncthing status",
         "folders": "Monitored folders",
         "folders-desc": "If none are selected the plugin monitors every configured folder",
@@ -64,6 +65,8 @@
         "saved": "Saved",
         "refresh": "Refresh now",
         "status": "Current status",
+        "url-info": "URL: {value}",
+        "api-source-info": "API: {value}",
         "about": "About",
         "developer": "Developed by Pir0c0pter0"
     },

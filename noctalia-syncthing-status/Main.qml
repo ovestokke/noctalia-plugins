@@ -90,31 +90,31 @@ Item {
                                       || state === "error"
                                       || state === "disconnected"
 
-    function tr(key) {
-        return pluginApi?.tr(key);
+    function tr(key, params) {
+        return pluginApi?.tr(key, params);
     }
 
     function stateLabel(code) {
-        return tr("state." + code) ?? code;
+        return tr("state." + code);
     }
 
     function sourceLabel(code) {
-        return tr("source." + code) ?? code;
+        return tr("source." + code);
     }
 
     function statusSummary() {
         if (!enabled) return tr("summary.disabled");
         if (state === "idle") {
             if (configuredDevices > 0) {
-                return (tr("summary.idle-devices") ?? "%1/%2").arg(connectedDevices).arg(configuredDevices);
+                return tr("summary.idle-devices", { "connected": connectedDevices, "configured": configuredDevices });
             }
             return tr("summary.idle-no-devices");
         }
         if (state === "syncing") {
-            if (needItems > 0) return (tr("summary.syncing-items") ?? "%1").arg(needItems);
-            return (tr("summary.syncing-folders") ?? "%1").arg(Math.max(syncingFolders, 1));
+            if (needItems > 0) return tr("summary.syncing-items", { "count": needItems });
+            return tr("summary.syncing-folders", { "count": Math.max(syncingFolders, 1) });
         }
-        return tr("summary." + state) ?? detail;
+        return tr("summary." + state);
     }
 
     function statusColor(code) {

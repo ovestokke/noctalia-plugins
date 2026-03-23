@@ -12,10 +12,10 @@
     },
     "summary": {
         "disabled": "Plugin-Abfrage ist deaktiviert",
-        "idle-devices": "%1/%2 Geräte verbunden",
+        "idle-devices": "{connected}/{configured} Geräte verbunden",
         "idle-no-devices": "Keine entfernten Geräte konfiguriert",
-        "syncing-items": "%1 Elemente ausstehend",
-        "syncing-folders": "%1 Ordner aktiv",
+        "syncing-items": "{count} Elemente ausstehend",
+        "syncing-folders": "{count} Ordner aktiv",
         "paused": "Alle überwachten Ordner sind pausiert",
         "disconnected": "Keine entfernten Geräte verbunden",
         "offline": "Syncthing GUI/API ist nicht erreichbar",
@@ -27,7 +27,8 @@
         "enable": "Syncthing Status aktivieren",
         "disable": "Syncthing Status deaktivieren",
         "refresh": "Jetzt aktualisieren",
-        "settings": "Einstellungen"
+        "settings": "Einstellungen",
+        "tooltip": "Syncthing - {state}\n{summary}"
     },
     "panel": {
         "title": "Syncthing",
@@ -38,11 +39,11 @@
         "no-folders": "Keine überwachten Ordner",
         "details": "Details",
         "recent-errors": "Letzte Fehler",
-        "last-check": "Letzte Prüfung",
-        "url": "GUI URL",
-        "config-path": "Konfigurationspfad",
-        "api-source": "API key Quelle",
-        "folder-state": "%1  (%2 Elemente)"
+        "last-check-info": "Letzte Prüfung: {value}",
+        "url-info": "GUI URL: {value}",
+        "config-path-info": "Konfigurationspfad: {value}",
+        "api-source-info": "API key Quelle: {value}",
+        "folder-state": "{state} ({count} Elemente)"
     },
     "settings": {
         "enabled": "Plugin aktivieren",
@@ -55,7 +56,7 @@
         "config-path-desc": "Optionaler Pfad zur Syncthing config.xml für automatische Erkennung",
         "verify-tls": "TLS-Zertifikate überprüfen",
         "verify-tls-desc": "Nur aktivieren, wenn Ihr Syncthing-HTTPS-Zertifikat vertrauenswürdig ist",
-        "poll-interval": "Abfrageintervall",
+        "poll-interval-label": "Abfrageintervall: {value}s",
         "poll-interval-desc": "Wie oft das Plugin den Syncthing-Status aktualisiert",
         "folders": "Überwachte Ordner",
         "folders-desc": "Wenn keine ausgewählt sind, überwacht das Plugin alle konfigurierten Ordner",
@@ -64,6 +65,8 @@
         "saved": "Gespeichert",
         "refresh": "Jetzt aktualisieren",
         "status": "Aktueller Status",
+        "url-info": "URL: {value}",
+        "api-source-info": "API: {value}",
         "about": "Über",
         "developer": "Entwickelt von Pir0c0pter0"
     },
