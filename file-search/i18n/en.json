@@ -15,7 +15,7 @@
     "prompts": {
       "emptyQuery": {
         "title": "Type to search files and folders",
-        "description": "Start typing to search for files and folders"
+        "description": "Start typing to search in {{root}}"
       },
       "searching": {
         "title": "Searching...",
