@@ -7,7 +7,7 @@ Item {
 
     property bool keyboardActive: false
 
-    // --- State checker ---
+    // --- Initial state check ---
     Process {
         id: stateChecker
         command: ["gsettings", "get", "org.gnome.desktop.a11y.applications", "screen-keyboard-enabled"]
@@ -16,34 +16,27 @@ Item {
                 root.keyboardActive = data.trim() === "true"
             }
         }
+        Component.onCompleted: running = true
     }
 
-    Timer {
-        id: pollTimer
-        interval: 3500
+    // --- Live monitor ---
+    Process {
+        id: stateMonitor
+        command: ["dconf", "watch", "/org/gnome/desktop/a11y/applications/screen-keyboard-enabled"]
         running: true
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: {
-            stateChecker.running = false
-            stateChecker.running = true
+        stdout: SplitParser {
+            onRead: data => {
+                let trimmed = data.trim()
+                if (trimmed === "true" || trimmed === "false") {
+                    root.keyboardActive = trimmed === "true"
+                }
+            }
         }
     }
 
-    // --- Toggle process ---
+    // --- Toggle ---
     Process {
         id: toggleProcess
-        onExited: recheckTimer.start()
-    }
-
-    Timer {
-        id: recheckTimer
-        interval: 500
-        repeat: false
-        onTriggered: {
-            stateChecker.running = false
-            stateChecker.running = true
-        }
     }
 
     function toggleKeyboard() {
