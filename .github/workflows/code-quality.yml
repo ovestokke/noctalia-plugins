@@ -40,7 +40,7 @@ jobs:
             exit 0
           fi
 
-          comment_body=$(printf -- '### Automatic Code Quality Review')
+          comment_body=$(printf -- '## Automatic Code Quality Review')
 
           issues=0
           line_index=0
@@ -68,7 +68,7 @@ jobs:
           while IFS= read -r line; do
             if echo "$line" | grep -E "^diff --git" >/dev/null; then
               title_added=false
-              file_title=$(printf -- '\n#### File: %s' "$(echo "$line" | sed 's/diff --git a\/\(.*\.qml\) .*/\1/g')")
+              file_title=$(printf -- '\n### File: %s' "$(echo "$line" | sed 's/diff --git a\/\(.*\.qml\) .*/\1/g')")
               echo "Checking file: $file_title"
             elif echo "$line" | grep -E "^@@" >/dev/null; then
               line_index=$(echo "$line" | grep -oE "\+[0-9]+" | grep -oE "[0-9]+")
@@ -91,7 +91,7 @@ jobs:
               fi
               if echo "$line" | grep -E "applyUiScale: *false" >/dev/null; then
                 if [[ "$file_title" != *BarWidget.qml ]]; then
-                check_file_title
+                  check_file_title
                   comment_body+=$(print_line "$l_priority" "$line_index" 'The `applyUiScale: false` would make it so that the component does not support ui scaling. Always check if this is the correct behaviour you want when changing the ui scale!' "$line")
                   issues=$((issues + 1))
                 fi
