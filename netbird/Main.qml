@@ -7,6 +7,7 @@ import qs.Services.UI
 Item {
     id: root
 
+    
     property var pluginApi: null
 
     onPluginApiChanged: {

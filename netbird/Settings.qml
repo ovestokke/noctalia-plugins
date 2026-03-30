@@ -7,6 +7,7 @@ import qs.Widgets
 ColumnLayout {
     id: root
 
+    
     property var pluginApi: null
 
     property int editRefreshInterval: pluginApi?.pluginSettings?.refreshInterval || pluginApi?.manifest?.metadata?.defaultSettings?.refreshInterval || 5000
@@ -132,14 +133,14 @@ ColumnLayout {
 
     NTextInput {
         Layout.fillWidth: true
-        label: pluginApi?.tr("settings.terminal") || "Terminal Configuration"
-        description: pluginApi?.tr("settings.terminal-desc") || "Set a custom terminal command or leave blank for auto-detection"
+        label: pluginApi?.tr("settings.terminal")
+        description: pluginApi?.tr("settings.terminal-desc")
         placeholderText: {
             var detected = pluginApi?.mainInstance?.detectedTerminal || "";
             if (detected !== "") {
-                return (pluginApi?.tr("settings.terminal-detected") || "Auto-detected") + ": " + detected;
+                return pluginApi?.tr("settings.terminal-detected") + ": " + detected;
             } else {
-                return pluginApi?.tr("settings.terminal-none") || "No terminal emulator detected";
+                return pluginApi?.tr("settings.terminal-none");
             }
         }
         text: root.editTerminalCommand

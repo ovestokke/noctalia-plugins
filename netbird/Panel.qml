@@ -10,8 +10,11 @@ import qs.Services.UI
 Item {
     id: root
 
+    
     property var pluginApi: null
+    
     readonly property var geometryPlaceholder: panelContainer
+    
     readonly property bool allowAttach: true
 
     readonly property var mainInstance: pluginApi?.mainInstance
