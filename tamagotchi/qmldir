@@ -1,0 +1,7 @@
+module Tamagotchi
+singleton TamagotchiState 1.0 TamagotchiState.qml
+Food 1.0 Food.qml
+Soap 1.0 Soap.qml
+Pet 1.0 Pet.qml
+Panel 1.0 Panel.qml
+BarWidget 1.0 BarWidget.qml

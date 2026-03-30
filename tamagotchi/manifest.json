@@ -1,0 +1,27 @@
+{
+  "id": "tamagochi",
+  "name": "Tamagochi",
+  "version": "1.0.0",
+  "minNoctaliaVersion": "4.6.6",
+  "author": "Joaquin Righetti",
+  "official": false,
+  "license": "MIT",
+  "repository": "",
+  "description": "A lightweight taskbar Tamagotchi that lives and evolves while you use your computer.",
+  "tags": ["Bar", "Fun", "Gaming"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml"
+  },
+  "dependencies": {
+    "plugins": []
+  },
+  "metadata": {
+    "defaultSettings": {
+      "hunger": 100,
+      "happiness": 100,
+      "cleanliness": 100,
+      "energy": 100
+    }
+  }
+}
