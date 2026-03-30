@@ -74,21 +74,47 @@ jobs:
 
           # Required Properties in Components
           inBarWidget=false
+          inDesktopWidget=false
+          inDesktopWidgetSettings=false
+          inControlCenterWidget=false
+          inLauncherProvider=false
+          inMain=false
+          inPanel=false
+          inSettings=false
+
           hasPluginApi=false
           hasScreen=false
           hasWidgetId=false
           hasSection=false
           hasSectionWidgetIndex=false
           hasSectionWidgetsCount=false
+          hasWidgetSettings=false
+          hasLauncher=false
+          hasName=false
+          hasGeometryPlaceholder=false
+          hasAllowAttach=false
 
           function reset_required_properties() {
             inBarWidget=false
+            inDesktopWidget=false
+            inDesktopWidgetSettings=false
+            inControlCenterWidget=false
+            inLauncherProvider=false
+            inMain=false
+            inPanel=false
+            inSettings=false
+
             hasPluginApi=false
             hasScreen=false
             hasWidgetId=false
             hasSection=false
             hasSectionWidgetIndex=false
             hasSectionWidgetsCount=false
+            hasWidgetSettings=false
+            hasLauncher=false
+            hasName=false
+            hasGeometryPlaceholder=false
+            hasAllowAttach=false
           }
 
 
@@ -115,6 +141,66 @@ jobs:
                 fi
               fi
 
+              if [ "$inDesktopWidget" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+              fi
+
+              if [ "$inDesktopWidgetSettings" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+                if [ "$hasWidgetSettings" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'widgetSettings' 'property var widgetSettings: null')
+                fi
+              fi
+
+              if [ "$inControlCenterWidget" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+                if [ "$hasScreen" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'screen' 'property ShellScreen screen')
+                fi
+              fi
+
+              if [ "$inLauncherProvider" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+                if [ "$hasLauncher" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'launcher' 'property var launcher: ""')
+                fi
+                if [ "$hasName" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'name' 'property string name: "Example"')
+                fi
+              fi
+
+              if [ "$inMain" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+              fi
+
+              if [ "$inPanel" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+                if [ "$hasGeometryPlaceholder" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'geometryPlaceholder' 'readonly property var geometryPlaceholder: panelContainer')
+                fi
+                if [ "$hasAllowAttach" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'allowAttach' 'readonly property bool allowAttach: true')
+                fi
+              fi
+
+              if [ "$inSettings" = true ]; then
+                if [ "$hasPluginApi" = false ]; then
+                  comment_body+=$(print_missing_property "$h_priority" 'pluginApi' 'property var pluginApi: null')
+                fi
+              fi
+
               reset_required_properties
 
               title_added=false
@@ -123,6 +209,27 @@ jobs:
 
               if [[ "$file_title" == *BarWidget.qml ]]; then
                 inBarWidget=true
+              fi
+              if [[ "$file_title" == *DesktopWidget.qml ]]; then
+                inDesktopWidget=true
+              fi
+              if [[ "$file_title" == *DesktopWidgetSettings.qml ]]; then
+                inDesktopWidgetSettings=true
+              fi
+              if [[ "$file_title" == *ControlCenterWidget.qml ]]; then
+                inControlCenterWidget=true
+              fi
+              if [[ "$file_title" == *LauncherProvider.qml ]]; then
+                inLauncherProvider=true
+              fi
+              if [[ "$file_title" == *Main.qml ]]; then
+                inMain=true
+              fi
+              if [[ "$file_title" == *Panel.qml ]]; then
+                inPanel=true
+              fi
+              if [[ "$file_title" == *Settings.qml ]]; then
+                inSettings=true
               fi
             elif echo "$line" | grep -E "^@@" >/dev/null; then
               line_index=$(echo "$line" | grep -oE "\+[0-9]+" | grep -oE "[0-9]+")
@@ -175,6 +282,66 @@ jobs:
                 fi
                 if echo "$line" | grep -E 'property int sectionWidgetsCount: 0' >/dev/null; then
                   hasSectionWidgetsCount=true
+                fi
+              fi
+
+              if [ "$inDesktopWidget" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
+                fi
+              fi
+
+              if [ "$inDesktopWidgetSettings" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
+                fi
+                if echo "$line" | grep -E 'property var widgetSettings: null' >/dev/null; then
+                  hasWidgetSettings=true
+                fi
+              fi
+
+              if [ "$inControlCenterWidget" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
+                fi
+                if echo "$line" | grep -E 'property ShellScreen screen' >/dev/null; then
+                  hasScreen=true
+                fi
+              fi
+
+              if [ "$inLauncherProvider" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
+                fi
+                if echo "$line" | grep -E 'property var launcher: null' >/dev/null; then
+                  hasLauncher=true
+                fi
+                if echo "$line" | grep -E 'property string name: ".*"' >/dev/null; then
+                  hasName=true
+                fi
+              fi
+
+              if [ "$inMain" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
+                fi
+              fi
+
+              if [ "$inPanel" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
+                fi
+                if echo "$line" | grep -E 'readonly property var geometryPlaceholder:' >/dev/null; then
+                  hasGeometryPlaceholder=true
+                fi
+                if echo "$line" | grep -E 'readonly property bool allowAttach:' >/dev/null; then
+                  hasAllowAttach=true
+                fi
+              fi
+
+              if [ "$inSettings" = true ]; then
+                if echo "$line" | grep -E 'property var pluginApi: null' >/dev/null; then
+                  hasPluginApi=true
                 fi
               fi
 
