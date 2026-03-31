@@ -231,7 +231,7 @@ jobs:
               reset_required_properties
 
               title_added=false
-              file_title=$(printf -- '\n### File: %s' "$(echo "$line" | sed 's/diff --git a\/\(.*\.qml\) .*/\1/g')")
+              file_title=$(printf -- '\n---\n### File: %s' "$(echo "$line" | sed 's/diff --git a\/\(.*\.qml\) .*/\1/g')")
               echo "Checking file: $file_title"
 
               if [[ "$file_title" == *BarWidget.qml ]]; then
