@@ -486,7 +486,7 @@
     {
       "id": "mawaqit",
       "name": "Mawaqit",
-      "version": "1.3.3",
+      "version": "1.3.4",
       "official": false,
       "author": "User",
       "description": "Shows prayer times with a live countdown and a Hijri calendar with Islamic events.",
@@ -496,7 +496,7 @@
         "Bar",
         "Panel"
       ],
-      "lastUpdated": "2026-03-30T08:46:30-04:00"
+      "lastUpdated": "2026-03-31T06:55:05+01:00"
     },
     {
       "id": "mimeapp-gui",
