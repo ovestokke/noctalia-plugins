@@ -156,6 +156,9 @@ jobs:
               # Check for required properties
               if echo "$line" | grep '"id":' >/dev/null; then
                 hasId=true
+                if echo "$line" | grep -vE '"id": "[a-zA-Z\-]"'; then
+                  print_line "$h_priority" "$line_index" 'The id can only contain small characters [a-z], numbers [0-9] and dashes [-]' "$line"
+                fi
               fi
               if echo "$line" | grep '"name":' >/dev/null; then
                 hasName=true
