@@ -829,7 +829,7 @@
     {
       "id": "openhue",
       "name": "Openhue widget",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "official": false,
       "author": "alxndrv",
       "description": "Plugin for controlling Philips Hue lights from the taskbar",
@@ -840,7 +840,7 @@
         "Bar",
         "Panel"
       ],
-      "lastUpdated": "2026-03-29T19:05:12-04:00"
+      "lastUpdated": "2026-04-01T18:21:46+02:00"
     },
     {
       "id": "parallax-wallpaper",
