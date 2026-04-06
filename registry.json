@@ -188,6 +188,23 @@
       "lastUpdated": "2026-03-29T19:05:12-04:00"
     },
     {
+      "id": "cloudflare-warp",
+      "name": "Cloudflare WARP",
+      "version": "1.0.0",
+      "official": false,
+      "author": "ToRvaLDz",
+      "description": "Toggle Cloudflare WARP from the bar. Shows connection status and mode.",
+      "repository": "https://github.com/noctalia-dev/noctalia-plugins",
+      "minNoctaliaVersion": "4.0.0",
+      "license": "MIT",
+      "tags": [
+        "Bar",
+        "Network",
+        "Panel"
+      ],
+      "lastUpdated": "2026-04-05T20:30:40+02:00"
+    },
+    {
       "id": "coin-flip",
       "name": "Coin Flipper",
       "version": "1.1.2",
