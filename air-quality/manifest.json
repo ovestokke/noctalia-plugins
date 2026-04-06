@@ -1,0 +1,31 @@
+{
+  "id": "air-quality",
+  "name": "Air Quality",
+  "version": "1.0.0",
+  "minNoctaliaVersion": "3.6.0",
+  "author": "adriamartin91",
+  "license": "MIT",
+  "repository": "https://github.com/noctalia-dev/noctalia-plugins",
+  "description": "Displays real-time air quality data from Open-Meteo with EPA color coding. Shows AQI index and pollutant breakdown.",
+  "tags": ["Bar", "Desktop", "Panel", "System", "Utility"],
+  "entryPoints": {
+    "main": "Main.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml",
+    "settings": "Settings.qml",
+    "desktopWidget": "DesktopWidget.qml"
+  },
+  "dependencies": {
+    "plugins": []
+  },
+  "metadata": {
+    "defaultSettings": {
+      "aqiScale": "us",
+      "useNoctaliaLocation": true,
+      "customLatitude": "",
+      "customLongitude": "",
+      "refreshInterval": 30,
+      "boldText": true
+    }
+  }
+}
