@@ -203,11 +203,19 @@ Item {
     Logger.d("Port Monitor", "Parsed " + root.portCount + " listening ports")
   }
 
+  // Delayed refresh after kill to let the process terminate
+  Timer {
+    id: killRefreshTimer
+    interval: 500
+    repeat: false
+    onTriggered: root.refresh()
+  }
+
   function killProcess(pid) {
     if (!pid) return
     Logger.i("Port Monitor", "Killing PID " + pid)
     Quickshell.execDetached(["kill", pid])
-    Qt.callLater(function() { root.refresh() })
+    killRefreshTimer.start()
   }
 
   function killPortElevated(port, proto) {
@@ -215,11 +223,12 @@ Item {
       Logger.w("Port Monitor", "No terminal emulator configured")
       return
     }
+    var portNum = parseInt(port)
+    if (isNaN(portNum) || portNum < 1 || portNum > 65535) return
     var protoFlag = proto === "TCP" ? "tcp" : "udp"
-    Logger.i("Port Monitor", "Opening terminal to kill port " + port + "/" + protoFlag)
+    Logger.i("Port Monitor", "Opening terminal to kill port " + portNum + "/" + protoFlag)
     Quickshell.execDetached([detectedTerminal, "-e", "sh", "-c",
-      "echo 'Killing process on port " + port + "/" + protoFlag + "...' && sudo fuser -k " + port + "/" + protoFlag + " && echo 'Done.' || echo 'Failed.'; read -n 1 -p \"Press any key to exit...\""])
-    Qt.callLater(function() { root.refresh() })
+      "echo 'Killing process on port " + portNum + "/" + protoFlag + "...' && sudo fuser -k " + portNum + "/" + protoFlag + " && echo 'Done.' || echo 'Failed.'; read -n 1 -p \"Press any key to exit...\""])
   }
 
 }

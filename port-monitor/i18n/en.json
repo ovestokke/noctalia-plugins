@@ -4,7 +4,7 @@
   },
   "bar": {
     "noPorts": "No listening ports",
-    "ports": "1 listening port",
+    "ports": "{count} listening port",
     "ports-plural": "{count} listening ports"
   },
   "panel": {

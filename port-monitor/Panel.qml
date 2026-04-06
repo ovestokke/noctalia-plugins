@@ -191,15 +191,9 @@ Item {
             }
           }
 
-          // No ports message
-          NText {
-            visible: (root.mainInstance?.portList ?? []).length === 0
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: Style.marginXL
-            Layout.bottomMargin: Style.marginXL
-            text: pluginApi?.tr("panel.noPorts")
-            pointSize: Style.fontSizeM
-            color: Color.mOnSurfaceVariant
+          // Spacer when empty
+          Item {
+            visible: root.portCount === 0
           }
         }
       }
