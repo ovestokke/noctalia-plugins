@@ -28,12 +28,12 @@ DraggableDesktopWidget {
     property string rootDisk: pluginApi?.tr("widget.loading")
     property string homeDisk: pluginApi?.tr("widget.loading")
 
-    function getTempHex(tempString) {
+    function getTempColor(tempString) {
         let val = parseFloat(tempString.replace(/[^\d.]/g, ''));
-        if (isNaN(val)) return "#ffffff"; // Default white
-        if (val >= 80) return "#ff5555"; // Hot
-        if (val >= 65) return "#ffb86c"; // Warm
-        return "#50fa7b"; // Cool :talialuv:
+        if (isNaN(val)) return Color.mOnSurface;
+        if (val >= 80) return "#ff5555"; // Red
+        if (val >= 65) return "#f1fa8c"; // Yellow
+        return "#50fa7b";                // Green
     }
     // --- Data Fetching ---
     Process {
@@ -202,19 +202,41 @@ DraggableDesktopWidget {
                 }
 
                 // CPU
+                // CPU Label (Left Column)
                 NText {
                     text: pluginApi?.tr("widget.cpu")
                     color: Color.mOnSurfaceVariant
                     font.pointSize: Style.fontSizeL * widgetScale
                 }
-                NText {
-                    text: root.cpuUsage + " @ <font color='" + root.getTempHex(root.cpuTemp) + "'>" + root.cpuTemp + "</font>"
-                    textFormat: Text.RichText
-                    color: Color.mOnSurface
-                    font.bold: true
-                    font.pointSize: Style.fontSizeL * widgetScale
+
+                // CPU Values (Right Column)
+                Row {
                     Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignRight
+                    layoutDirection: Qt.RightToLeft // Pushes items to the right wall
+                    spacing: 4
+
+                    // Temperature - Using the native color property
+                    NText {
+                        text: root.cpuTemp
+                        color: root.getTempColor(root.cpuTemp)
+                        font.bold: true
+                        font.pointSize: Style.fontSizeL * widgetScale
+                    }
+
+                    // Separator
+                    NText {
+                        text: "@"
+                        color: Color.mOnSurface
+                        font.pointSize: Style.fontSizeL * widgetScale
+                    }
+
+                    // Usage
+                    NText {
+                        text: root.cpuUsage
+                        color: Color.mOnSurface
+                        font.bold: true
+                        font.pointSize: Style.fontSizeL * widgetScale
+                    }
                 }
 
                 // Memory
