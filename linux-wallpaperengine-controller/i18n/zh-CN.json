@@ -44,6 +44,11 @@
     "errorDismiss": "关闭提示",
     "reload": "重载",
     "stop": "停止",
+    "confirm": "确认",
+    "cancel": "取消",
+    "compatibilityQuickCheck": "兼容性快速检查",
+    "compatibilityQuickCheckRunning": "正在检查壁纸兼容性...",
+    "compatibilityQuickCheckConfirm": "是否扫描全部壁纸的额外属性兼容性？这可能需要一些时间。",
     "folderInvalid": "壁纸源目录无效或不可访问。",
     "scanning": "正在扫描壁纸...",
     "searchPlaceholder": "搜索壁纸...",
@@ -59,6 +64,12 @@
     "wallpaperAudioReactive": "音频响应效果",
     "wallpaperDisableMouse": "禁用鼠标交互",
     "wallpaperDisableParallax": "禁用视差效果",
+    "sectionProperties": "额外属性",
+    "loadingProperties": "正在读取壁纸属性...",
+    "propertiesLoadFailed": "读取壁纸属性失败，可能是该壁纸的属性格式暂未支持，或该壁纸本身无法被正确加载和运行",
+    "propertiesFailedBadge": "可能异常",
+    "noEditableProperties": "此壁纸暂时没有可编辑的额外属性",
+    "propertiesNotice": "这里只显示当前插件可直接编辑的属性",
     "infoType": "类型",
     "infoId": "ID",
     "infoResolution": "分辨率",
@@ -96,12 +107,17 @@
     "resolutionUnknown": "未知",
     "dynamicBadge": "动态",
     "staticBadge": "静态",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "pageSummary": "第 {current} / {total} 页",
+    "pageRange": "{start}-{end} / 共 {total} 项",
     "count": "壁纸数量：{count}",
     "emptyAll": "源目录中未找到任何壁纸",
     "emptyFiltered": "源目录中未找到符合条件的壁纸"
   },
   "settings": {
     "category": {
+      "interfaceTitle": "界面",
       "performanceTitle": "性能",
       "compatibilityTitle": "兼容性",
       "audioTitle": "音频",
@@ -110,6 +126,10 @@
     "iconColor": {
       "label": "图标颜色",
       "description": "用于栏组件图标的颜色"
+    },
+    "enableExtraPropertiesEditor": {
+      "label": "启用额外属性编辑器",
+      "description": "在可用时于面板侧栏显示壁纸专属的额外属性"
     },
     "units": {
       "fps": " FPS",

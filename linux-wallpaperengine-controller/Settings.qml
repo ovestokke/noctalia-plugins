@@ -16,6 +16,7 @@ ColumnLayout {
   property string editWallpapersFolder: cfg.wallpapersFolder ?? defaults.wallpapersFolder ?? ""
   property string editAssetsDir: cfg.assetsDir ?? defaults.assetsDir ?? ""
   property string editIconColor: cfg.iconColor ?? defaults.iconColor ?? "none"
+  property bool editEnableExtraPropertiesEditor: cfg.enableExtraPropertiesEditor ?? defaults.enableExtraPropertiesEditor ?? true
   property string editDefaultScaling: cfg.defaultScaling ?? defaults.defaultScaling ?? "fill"
   property int editDefaultFps: cfg.defaultFps ?? defaults.defaultFps ?? 30
   property int editDefaultVolume: cfg.defaultVolume ?? defaults.defaultVolume ?? 100
@@ -32,7 +33,7 @@ ColumnLayout {
 
   NText {
     Layout.fillWidth: true
-    text: pluginApi?.tr("settings.category.performanceTitle")
+    text: pluginApi?.tr("settings.category.interfaceTitle")
     color: Color.mOnSurface
     font.weight: Font.Bold
   }
@@ -43,6 +44,25 @@ ColumnLayout {
     description: pluginApi?.tr("settings.iconColor.description")
     currentKey: root.editIconColor
     onSelected: key => root.editIconColor = key
+  }
+
+  NToggle {
+    Layout.fillWidth: true
+    label: pluginApi?.tr("settings.enableExtraPropertiesEditor.label")
+    description: pluginApi?.tr("settings.enableExtraPropertiesEditor.description")
+    checked: root.editEnableExtraPropertiesEditor
+    onToggled: checked => root.editEnableExtraPropertiesEditor = checked
+  }
+
+  NDivider {
+    Layout.fillWidth: true
+  }
+
+  NText {
+    Layout.fillWidth: true
+    text: pluginApi?.tr("settings.category.performanceTitle")
+    color: Color.mOnSurface
+    font.weight: Font.Bold
   }
 
   NSpinBox {
@@ -80,6 +100,10 @@ ColumnLayout {
     description: pluginApi?.tr("settings.autoApplyOnStartup.description")
     checked: root.editAutoApplyOnStartup
     onToggled: checked => root.editAutoApplyOnStartup = checked
+  }
+
+  NDivider {
+    Layout.fillWidth: true
   }
 
   NText {
@@ -122,6 +146,10 @@ ColumnLayout {
     onTextChanged: root.editAssetsDir = text
   }
 
+  NDivider {
+    Layout.fillWidth: true
+  }
+
   NText {
     Layout.fillWidth: true
     text: pluginApi?.tr("settings.category.audioTitle")
@@ -155,6 +183,10 @@ ColumnLayout {
     label: pluginApi?.tr("settings.defaultAudioReactiveEffects.label")
     checked: root.editDefaultAudioReactiveEffects
     onToggled: checked => root.editDefaultAudioReactiveEffects = checked
+  }
+
+  NDivider {
+    Layout.fillWidth: true
   }
 
   NText {
@@ -205,6 +237,7 @@ ColumnLayout {
     pluginApi.pluginSettings.wallpapersFolder = root.editWallpapersFolder;
     pluginApi.pluginSettings.assetsDir = root.editAssetsDir;
     pluginApi.pluginSettings.iconColor = root.editIconColor;
+    pluginApi.pluginSettings.enableExtraPropertiesEditor = root.editEnableExtraPropertiesEditor;
     pluginApi.pluginSettings.defaultScaling = root.editDefaultScaling;
     pluginApi.pluginSettings.defaultFps = defaultFpsSpinBox.value;
     pluginApi.pluginSettings.defaultVolume = defaultVolumeSpinBox.value;

@@ -44,6 +44,11 @@
     "errorDismiss": "Закрыть",
     "reload": "Перезагрузить",
     "stop": "Остановить",
+    "confirm": "Подтвердить",
+    "cancel": "Отмена",
+    "compatibilityQuickCheck": "Быстрая проверка совместимости",
+    "compatibilityQuickCheckRunning": "Проверка совместимости обоев...",
+    "compatibilityQuickCheckConfirm": "Просканировать все обои на совместимость дополнительных свойств? Это может занять некоторое время.",
     "folderInvalid": "Каталог источника обоев недействителен или недоступен.",
     "scanning": "Сканирование обоев...",
     "searchPlaceholder": "Поиск обоев...",
@@ -59,6 +64,12 @@
     "wallpaperAudioReactive": "Эффекты аудиореакции",
     "wallpaperDisableMouse": "Отключить взаимодействие мышью",
     "wallpaperDisableParallax": "Отключить эффект параллакса",
+    "sectionProperties": "Дополнительные свойства",
+    "loadingProperties": "Загрузка свойств обоев...",
+    "propertiesLoadFailed": "Не удалось загрузить свойства обоев. Возможно, формат свойств этих обоев пока не поддерживается, либо сами обои не могут быть корректно загружены и запущены",
+    "propertiesFailedBadge": "Может не работать",
+    "noEditableProperties": "У этих обоев пока нет поддерживаемых редактируемых дополнительных свойств",
+    "propertiesNotice": "Здесь показаны только свойства, которые этот плагин умеет редактировать напрямую",
     "infoType": "Тип",
     "infoId": "ID",
     "infoResolution": "Разрешение",
@@ -96,12 +107,17 @@
     "resolutionUnknown": "Неизвестно",
     "dynamicBadge": "Динамические",
     "staticBadge": "Статические",
+    "prevPage": "Назад",
+    "nextPage": "Вперёд",
+    "pageSummary": "Страница {current} / {total}",
+    "pageRange": "{start}-{end} / {total}",
     "count": "Количество обоев: {count}",
     "emptyAll": "В исходном каталоге не найдено ни одних обоев",
     "emptyFiltered": "Не найдено обоев, соответствующих текущим фильтрам"
   },
   "settings": {
     "category": {
+      "interfaceTitle": "Интерфейс",
       "performanceTitle": "Производительность",
       "compatibilityTitle": "Совместимость",
       "audioTitle": "Аудио",
@@ -110,6 +126,10 @@
     "iconColor": {
       "label": "Цвет значка",
       "description": "Цвет значка виджета на панели"
+    },
+    "enableExtraPropertiesEditor": {
+      "label": "Включить редактор дополнительных свойств",
+      "description": "Показывать в боковой панели дополнительные свойства конкретных обоев, если они доступны"
     },
     "units": {
       "fps": " FPS",

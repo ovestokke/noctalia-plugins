@@ -44,6 +44,11 @@
     "errorDismiss": "閉じる",
     "reload": "再読み込み",
     "stop": "停止",
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "compatibilityQuickCheck": "互換性クイックチェック",
+    "compatibilityQuickCheckRunning": "壁紙の互換性を確認中...",
+    "compatibilityQuickCheckConfirm": "すべての壁紙の追加プロパティ互換性をスキャンしますか？ 少し時間がかかる場合があります。",
     "folderInvalid": "壁紙ソースディレクトリが無効、またはアクセスできません。",
     "scanning": "壁紙をスキャン中...",
     "searchPlaceholder": "壁紙を検索...",
@@ -59,6 +64,12 @@
     "wallpaperAudioReactive": "オーディオ反応効果",
     "wallpaperDisableMouse": "マウス操作を無効化",
     "wallpaperDisableParallax": "パララックス効果を無効化",
+    "sectionProperties": "追加プロパティ",
+    "loadingProperties": "壁紙プロパティを読み込み中...",
+    "propertiesLoadFailed": "壁紙プロパティの読み込みに失敗しました。この壁紙のプロパティ形式はまだサポートされていない可能性があるか、この壁紙自体が正しく読み込めず実行できない可能性があります",
+    "propertiesFailedBadge": "要注意",
+    "noEditableProperties": "この壁紙には、今のところ編集可能な追加プロパティがありません",
+    "propertiesNotice": "ここには、このプラグインで直接編集できるプロパティのみ表示されます",
     "infoType": "タイプ",
     "infoId": "ID",
     "infoResolution": "解像度",
@@ -96,12 +107,17 @@
     "resolutionUnknown": "不明",
     "dynamicBadge": "動的",
     "staticBadge": "静的",
+    "prevPage": "前へ",
+    "nextPage": "次へ",
+    "pageSummary": "{current} / {total} ページ",
+    "pageRange": "{start}-{end} / {total}",
     "count": "壁紙数: {count}",
     "emptyAll": "ソースディレクトリに壁紙が見つかりません",
     "emptyFiltered": "条件に一致する壁紙が見つかりません"
   },
   "settings": {
     "category": {
+      "interfaceTitle": "インターフェース",
       "performanceTitle": "パフォーマンス",
       "compatibilityTitle": "互換性",
       "audioTitle": "音声",
@@ -110,6 +126,10 @@
     "iconColor": {
       "label": "アイコンの色",
       "description": "バーウィジェットのアイコンに使う色"
+    },
+    "enableExtraPropertiesEditor": {
+      "label": "追加プロパティ編集を有効化",
+      "description": "利用可能な場合、壁紙ごとの追加プロパティをパネルのサイドバーに表示します"
     },
     "units": {
       "fps": " FPS",

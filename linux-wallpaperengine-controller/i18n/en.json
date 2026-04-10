@@ -44,6 +44,11 @@
     "errorDismiss": "Dismiss",
     "reload": "Reload",
     "stop": "Stop",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "compatibilityQuickCheck": "Compatibility quick check",
+    "compatibilityQuickCheckRunning": "Checking wallpaper compatibility...",
+    "compatibilityQuickCheckConfirm": "Scan all wallpapers for extra property compatibility? This may take some time.",
     "folderInvalid": "Wallpaper source directory is invalid or inaccessible.",
     "scanning": "Scanning wallpapers...",
     "searchPlaceholder": "Search wallpapers...",
@@ -59,6 +64,12 @@
     "wallpaperAudioReactive": "Audio reactive effects",
     "wallpaperDisableMouse": "Disable mouse interaction",
     "wallpaperDisableParallax": "Disable parallax effect",
+    "sectionProperties": "Extra properties",
+    "loadingProperties": "Loading wallpaper properties...",
+    "propertiesLoadFailed": "Failed to load wallpaper properties. This wallpaper format may not be supported yet, or this wallpaper may not run correctly",
+    "propertiesFailedBadge": "May fail",
+    "noEditableProperties": "This wallpaper has no editable extra properties yet",
+    "propertiesNotice": "Only directly editable properties supported by this plugin are shown here",
     "infoType": "Type",
     "infoId": "ID",
     "infoResolution": "Resolution",
@@ -96,12 +107,17 @@
     "resolutionUnknown": "Unknown",
     "dynamicBadge": "Dynamic",
     "staticBadge": "Static",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "pageSummary": "Page {current} / {total}",
+    "pageRange": "{start}-{end} / {total}",
     "count": "Wallpaper count: {count}",
     "emptyAll": "No wallpapers found in the source directory",
     "emptyFiltered": "No wallpapers match the current filters"
   },
   "settings": {
     "category": {
+      "interfaceTitle": "Interface",
       "performanceTitle": "Performance",
       "compatibilityTitle": "Compatibility",
       "audioTitle": "Audio",
@@ -110,6 +126,10 @@
     "iconColor": {
       "label": "Icon color",
       "description": "Color used for the bar widget icon"
+    },
+    "enableExtraPropertiesEditor": {
+      "label": "Enable extra property editor",
+      "description": "Show wallpaper-specific extra properties in the panel sidebar when available"
     },
     "units": {
       "fps": " FPS",

@@ -41,6 +41,10 @@ Item {
       pluginApi.pluginSettings.lastKnownGoodScreens = {};
     }
 
+    if (pluginApi.pluginSettings.wallpaperProperties === undefined || pluginApi.pluginSettings.wallpaperProperties === null) {
+      pluginApi.pluginSettings.wallpaperProperties = {};
+    }
+
     if (pluginApi.pluginSettings.runtimeRecoveryPending === undefined || pluginApi.pluginSettings.runtimeRecoveryPending === null) {
       pluginApi.pluginSettings.runtimeRecoveryPending = false;
     }
@@ -213,6 +217,52 @@ Item {
     return false;
   }
 
+  function wallpaperIdFromPath(path) {
+    const raw = normalizedPath(path);
+    if (raw.length === 0) {
+      return "";
+    }
+
+    const parts = raw.split("/");
+    return parts.length > 0 ? String(parts[parts.length - 1] || "") : "";
+  }
+
+  function cloneWallpaperProperties(source) {
+    const cloned = {};
+    const raw = source || ({});
+    for (const key of Object.keys(raw)) {
+      const value = raw[key];
+      if (value !== undefined) {
+        cloned[key] = value;
+      }
+    }
+    return cloned;
+  }
+
+  function setWallpaperProperties(path, properties) {
+    if (!pluginApi) {
+      return;
+    }
+
+    ensureSettingsRoot();
+    const wallpaperId = wallpaperIdFromPath(path);
+    if (wallpaperId.length === 0) {
+      return;
+    }
+
+    pluginApi.pluginSettings.wallpaperProperties[wallpaperId] = cloneWallpaperProperties(properties);
+  }
+
+  function getWallpaperProperties(path) {
+    const wallpaperId = wallpaperIdFromPath(path);
+    if (wallpaperId.length === 0) {
+      return {};
+    }
+
+    const raw = cfg.wallpaperProperties || ({});
+    return cloneWallpaperProperties(raw[wallpaperId] || ({}));
+  }
+
   function setScreenWallpaper(screenName, path) {
     setScreenWallpaperWithOptions(screenName, path, ({}));
   }
@@ -258,6 +308,10 @@ Item {
 
     if (options?.disableParallax !== undefined) {
       pluginApi.pluginSettings.screens[screenName].disableParallax = !!options.disableParallax;
+    }
+
+    if (options?.customProperties !== undefined) {
+      setWallpaperProperties(path, options.customProperties);
     }
 
     pluginApi.saveSettings();
@@ -329,6 +383,10 @@ Item {
       }
       if (hasDisableParallax) {
         pluginApi.pluginSettings.screens[screen.name].disableParallax = !!options.disableParallax;
+      }
+
+      if (options?.customProperties !== undefined) {
+        setWallpaperProperties(path, options.customProperties);
       }
     }
 
@@ -419,6 +477,7 @@ Item {
   function buildCommand() {
     const command = ["linux-wallpaperengine"];
     let firstPath = "";
+    const appendedWallpaperIds = {};
     let runtimeOptions = {
       volume: defaultVolume,
       muted: defaultMuted,
@@ -495,6 +554,20 @@ Item {
       command.push(screen.name);
       command.push("--bg");
       command.push(path);
+
+      const wallpaperId = wallpaperIdFromPath(path);
+      if (wallpaperId.length > 0 && !appendedWallpaperIds[wallpaperId]) {
+        const customProperties = getWallpaperProperties(path);
+        for (const propertyKey of Object.keys(customProperties)) {
+          const propertyValue = customProperties[propertyKey];
+          if (propertyValue === undefined || propertyValue === null || String(propertyKey || "").trim().length === 0) {
+            continue;
+          }
+          command.push("--set-property");
+          command.push(String(propertyKey) + "=" + String(propertyValue));
+        }
+        appendedWallpaperIds[wallpaperId] = true;
+      }
     }
 
     if (firstPath.length > 0) {

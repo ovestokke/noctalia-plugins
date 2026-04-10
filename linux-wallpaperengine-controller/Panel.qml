@@ -39,6 +39,9 @@ Item {
   property bool selectedDisableMouse: false
   property bool selectedDisableParallax: false
   property bool scanningWallpapers: false
+  property bool loadingWallpaperProperties: false
+  property bool scanningCompatibility: false
+  property bool pendingCompatibilityScan: false
   property bool folderAccessible: true
 
   property string searchText: ""
@@ -46,6 +49,8 @@ Item {
   property string selectedResolution: "all"
   property string sortMode: "name"
   property bool sortAscending: true
+  property int currentPage: 0
+  property int pageSize: 24
   readonly property bool singleScreenMode: Quickshell.screens.length <= 1
   property bool applyAllDisplays: !singleScreenMode && root._applyAllDisplays
   property bool _applyAllDisplays: true
@@ -67,7 +72,19 @@ Item {
   property var screenModel: []
   property var wallpaperItems: []
   property var visibleWallpapers: []
+  property var pagedWallpapers: []
+  property var wallpaperPropertyLoadFailedByPath: ({})
+  property var wallpaperPropertyDefinitions: []
+  property var wallpaperPropertyValues: ({})
+  property string wallpaperPropertyError: ""
+  property string wallpaperPropertyRequestPath: ""
   readonly property bool hasRuntimeError: !!(mainInstance?.lastError && mainInstance.lastError.length > 0)
+  readonly property bool extraPropertiesEditorEnabled: cfg.enableExtraPropertiesEditor ?? defaults.enableExtraPropertiesEditor ?? true
+  readonly property int pageCount: Math.max(1, Math.ceil(visibleWallpapers.length / Math.max(pageSize, 1)))
+  readonly property bool paginationVisible: visibleWallpapers.length > pageSize
+  readonly property int currentPageDisplay: visibleWallpapers.length === 0 ? 0 : currentPage + 1
+  readonly property int currentPageStartIndex: visibleWallpapers.length === 0 ? 0 : currentPage * pageSize + 1
+  readonly property int currentPageEndIndex: Math.min((currentPage + 1) * pageSize, visibleWallpapers.length)
   readonly property var selectedWallpaperData: {
     const target = String(pendingPath || "");
     if (target.length === 0) {
@@ -214,6 +231,406 @@ Item {
     return pluginApi?.tr("panel.filterResAll");
   }
 
+  function wallpaperIdFromPath(path) {
+    const raw = String(path || "").trim();
+    if (raw.length === 0) {
+      return "";
+    }
+    const parts = raw.split("/");
+    return parts.length > 0 ? String(parts[parts.length - 1] || "") : "";
+  }
+
+  function stripHtml(rawText) {
+    return String(rawText || "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;?/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function cleanedPropertyLabel(rawText, fallbackKey) {
+    const stripped = stripHtml(rawText)
+      .replace(/^[\-–—•·*_#\s]+/, "")
+      .replace(/^[^\p{L}\p{N}]+/u, "")
+      .trim();
+    if (stripped.length > 0) {
+      return normalizePropertyLabel(stripped);
+    }
+    return normalizePropertyLabel(String(fallbackKey || ""));
+  }
+
+  function normalizePropertyLabel(value) {
+    const raw = String(value || "").trim();
+    if (raw.length === 0) {
+      return "";
+    }
+
+    const looksLikeKey = /^[a-z0-9_]+$/i.test(raw) && raw.indexOf("_") >= 0;
+    if (!looksLikeKey) {
+      return raw;
+    }
+
+    return raw
+      .replace(/^ui_browse_properties_/i, "")
+      .replace(/^ui_/i, "")
+      .replace(/^properties_/i, "")
+      .split("_")
+      .filter(part => part.length > 0)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ");
+  }
+
+  function isNoisePropertyKey(value) {
+    const key = String(value || "").toLowerCase().trim();
+    if (key.length === 0) {
+      return true;
+    }
+    return key.indexOf("imgsrc") === 0
+      || key.indexOf("brahref") === 0
+      || key.indexOf("centerbrahref") === 0
+      || key.indexOf("bigweixin") === 0
+      || key.indexOf("viewer_4") >= 0
+      || key.indexOf("photogz") >= 0
+      || key.indexOf("mqpic") >= 0
+      || key.indexOf("width") >= 0 && key.indexOf("height") >= 0;
+  }
+
+  function isNoisePropertyLabel(value) {
+    const label = String(value || "").toLowerCase().trim();
+    if (label.length === 0) {
+      return true;
+    }
+    return label.indexOf("imgsrc") >= 0
+      || label.indexOf("photogz") >= 0
+      || label.indexOf("mqpic") >= 0
+      || label.indexOf("viewer_4") >= 0;
+  }
+
+  function parsePropertyValue(rawValue, type) {
+    const trimmed = String(rawValue || "").trim();
+    if (type === "boolean") {
+      return trimmed === "1";
+    }
+    if (type === "slider") {
+      const parsed = Number(trimmed);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    if (type === "combo") {
+      return String(trimmed);
+    }
+    if (type === "textinput") {
+      return trimmed.replace(/^"|"$/g, "");
+    }
+    if (type === "color") {
+      const parts = trimmed.split(",").map(part => Number(String(part).trim()));
+      if (parts.length >= 3 && parts.every(part => !isNaN(part))) {
+        const maxChannel = Math.max(parts[0], parts[1], parts[2]);
+        if (maxChannel > 1) {
+          return Qt.rgba(parts[0] / 255, parts[1] / 255, parts[2] / 255, 1);
+        }
+        return Qt.rgba(parts[0], parts[1], parts[2], 1);
+      }
+      return Qt.rgba(1, 1, 1, 1);
+    }
+    return trimmed;
+  }
+
+  function serializePropertyValue(value, type) {
+    if (type === "boolean") {
+      return value ? "1" : "0";
+    }
+    if (type === "slider") {
+      return String(value);
+    }
+    if (type === "combo") {
+      return String(value);
+    }
+    if (type === "textinput") {
+      return String(value);
+    }
+    if (type === "color") {
+      const color = value;
+      const r = Math.round((color?.r ?? 1) * 255);
+      const g = Math.round((color?.g ?? 1) * 255);
+      const b = Math.round((color?.b ?? 1) * 255);
+      return String(r) + "," + String(g) + "," + String(b);
+    }
+    return String(value);
+  }
+
+  function propertyValueFor(definition) {
+    const key = String(definition?.key || "");
+    if (key.length === 0) {
+      return "";
+    }
+    const raw = wallpaperPropertyValues || ({});
+    if (raw[key] !== undefined) {
+      return raw[key];
+    }
+    return definition.defaultValue;
+  }
+
+  function comboChoicesFor(definition) {
+    const rawChoices = definition?.choices || [];
+    const normalized = [];
+    for (const choice of rawChoices) {
+      const key = String(choice?.key ?? choice?.value ?? "").trim();
+      const name = String(choice?.name ?? choice?.label ?? choice?.text ?? key).trim();
+      if (key.length === 0) {
+        continue;
+      }
+      normalized.push({ key: key, name: name.length > 0 ? name : key });
+    }
+    return normalized;
+  }
+
+  function ensureColorValue(value) {
+    if (value === undefined || value === null || value === "") {
+      return Qt.rgba(1, 1, 1, 1);
+    }
+    if (typeof value === "string") {
+      return parsePropertyValue(value, "color");
+    }
+    if (value.r !== undefined && value.g !== undefined && value.b !== undefined) {
+      return Qt.rgba(value.r, value.g, value.b, value.a !== undefined ? value.a : 1);
+    }
+    return Qt.rgba(1, 1, 1, 1);
+  }
+
+  function numberOr(value, fallback) {
+    const parsed = Number(value);
+    return isNaN(parsed) ? fallback : parsed;
+  }
+
+  function formatSliderValue(value, step) {
+    const numericValue = numberOr(value, 0);
+    const numericStep = Math.max(numberOr(step, 1), 0.001);
+    let decimals = 0;
+    if (numericStep < 1) {
+      const stepText = String(numericStep);
+      if (stepText.indexOf("e-") >= 0) {
+        decimals = Number(stepText.split("e-")[1]) || 0;
+      } else if (stepText.indexOf(".") >= 0) {
+        decimals = stepText.split(".")[1].length;
+      }
+    }
+    return numericValue.toFixed(Math.min(decimals, 6));
+  }
+
+  function setPropertyValue(key, value) {
+    const current = wallpaperPropertyValues || ({});
+    const next = Object.assign({}, current);
+    next[String(key)] = value;
+    wallpaperPropertyValues = next;
+  }
+
+  function parseWallpaperPropertiesOutput(rawText) {
+    const lines = String(rawText || "").split(/\r?\n/);
+    const definitions = [];
+    let current = null;
+    let parsingValues = false;
+
+    function commitCurrent() {
+      if (!current) {
+        return;
+      }
+      if (["boolean", "slider", "combo", "textinput", "color", "text"].indexOf(current.type) === -1) {
+        current = null;
+        parsingValues = false;
+        return;
+      }
+      current.label = cleanedPropertyLabel(current.label, current.key);
+      if (current.type === "text") {
+        if (current.label.length === 0 || isNoisePropertyLabel(current.label)) {
+          current = null;
+          parsingValues = false;
+          return;
+        }
+        definitions.push({
+          key: current.key,
+          type: "text",
+          label: current.label,
+          defaultValue: ""
+        });
+        current = null;
+        parsingValues = false;
+        return;
+      }
+      if (isNoisePropertyKey(current.key) || isNoisePropertyLabel(current.label)) {
+        current = null;
+        parsingValues = false;
+        return;
+      }
+      definitions.push(current);
+      current = null;
+      parsingValues = false;
+    }
+
+    for (const rawLine of lines) {
+      const line = String(rawLine || "");
+      const trimmed = line.trim();
+      if (trimmed.length === 0) {
+        commitCurrent();
+        continue;
+      }
+
+      if (trimmed.indexOf("Unknown object type found:") === 0
+          || trimmed.indexOf("ScriptEngine [evaluate]:") === 0
+          || trimmed.indexOf("Text objects are not supported yet") === 0
+          || trimmed.indexOf("Applying override value for ") === 0) {
+        continue;
+      }
+
+      const headerMatch = trimmed.match(/^([^\s].*?)\s+-\s+(slider|boolean|combo|textinput|color|text|scene texture)$/i);
+      if (headerMatch) {
+        commitCurrent();
+        current = {
+          key: headerMatch[1].trim(),
+          type: headerMatch[2].toLowerCase(),
+          label: "",
+          min: undefined,
+          max: undefined,
+          step: undefined,
+          defaultValue: "",
+          choices: []
+        };
+        parsingValues = false;
+        continue;
+      }
+
+      if (!current) {
+        continue;
+      }
+
+      if (trimmed.indexOf("Text:") === 0) {
+        current.label = trimmed.substring(5).trim();
+        parsingValues = false;
+        continue;
+      }
+      if (trimmed.indexOf("Min:") === 0) {
+        const parsed = Number(trimmed.substring(4).trim());
+        current.min = isNaN(parsed) ? undefined : parsed;
+        parsingValues = false;
+        continue;
+      }
+      if (trimmed.indexOf("Max:") === 0) {
+        const parsed = Number(trimmed.substring(4).trim());
+        current.max = isNaN(parsed) ? undefined : parsed;
+        parsingValues = false;
+        continue;
+      }
+      if (trimmed.indexOf("Step:") === 0) {
+        const parsed = Number(trimmed.substring(5).trim());
+        current.step = isNaN(parsed) ? undefined : parsed;
+        parsingValues = false;
+        continue;
+      }
+      if (trimmed.indexOf("Value:") === 0) {
+        current.defaultValue = parsePropertyValue(trimmed.substring(6).trim(), current.type);
+        parsingValues = false;
+        continue;
+      }
+      if (trimmed === "Values:") {
+        parsingValues = true;
+        continue;
+      }
+
+      if (parsingValues && current.type === "combo") {
+        const valueMatch = trimmed.match(/^(.*?)\s*=\s*(.*)$/);
+        if (valueMatch) {
+          const choiceKey = valueMatch[1].trim();
+          const choiceName = valueMatch[2].trim();
+          current.choices.push({
+            key: choiceKey,
+            name: choiceName,
+            label: choiceName,
+            value: choiceKey,
+            text: choiceName
+          });
+        }
+      }
+    }
+
+    commitCurrent();
+    return definitions;
+  }
+
+  function loadWallpaperProperties(path) {
+    const wallpaperPath = String(path || "").trim();
+    wallpaperPropertyDefinitions = [];
+    wallpaperPropertyValues = ({});
+    wallpaperPropertyError = "";
+    wallpaperPropertyRequestPath = wallpaperPath;
+
+    if (!extraPropertiesEditorEnabled || wallpaperPath.length === 0 || !(mainInstance?.engineAvailable ?? false)) {
+      loadingWallpaperProperties = false;
+      return;
+    }
+
+    loadingWallpaperProperties = true;
+    wallpaperPropertyProcess.command = ["linux-wallpaperengine", wallpaperPath, "--list-properties"];
+    wallpaperPropertyProcess.running = true;
+  }
+
+  function setWallpaperPropertyLoadFailed(path, failed) {
+    const wallpaperPath = String(path || "").trim();
+    if (wallpaperPath.length === 0) {
+      return;
+    }
+
+    const nextState = Object.assign({}, wallpaperPropertyLoadFailedByPath);
+    if (failed) {
+      nextState[wallpaperPath] = true;
+    } else {
+      delete nextState[wallpaperPath];
+    }
+    wallpaperPropertyLoadFailedByPath = nextState;
+  }
+
+  function startCompatibilityScan() {
+    const folderPath = String(resolvedWallpapersFolder || "").trim();
+    if (folderPath.length === 0 || !(mainInstance?.engineAvailable ?? false)) {
+      pendingCompatibilityScan = false;
+      return;
+    }
+
+    const pluginDir = pluginApi?.pluginDir || "";
+    const scriptPath = pluginDir + "/scripts/scan-properties-compatibility.sh";
+
+    pendingCompatibilityScan = false;
+    scanningCompatibility = true;
+    compatibilityScanProcess.command = ["sh", scriptPath, folderPath];
+    compatibilityScanProcess.running = true;
+  }
+
+  function applyCompatibilityScanOutput(rawText) {
+    const nextState = {};
+    const lines = String(rawText || "").split(/\r?\n/);
+
+    for (const rawLine of lines) {
+      const line = String(rawLine || "").trim();
+      if (line.length === 0) {
+        continue;
+      }
+
+      const parts = line.split("\t");
+      const path = String(parts[0] || "").trim();
+      const failed = String(parts[1] || "0").trim() === "1";
+      if (path.length === 0) {
+        continue;
+      }
+
+      if (failed) {
+        nextState[path] = true;
+      }
+    }
+
+    wallpaperPropertyLoadFailedByPath = nextState;
+  }
+
   function closeDropdowns() {
     filterDropdownOpen = false;
     resolutionDropdownOpen = false;
@@ -342,6 +759,15 @@ Item {
     options.audioReactiveEffects = selectedAudioReactiveEffects;
     options.disableMouse = selectedDisableMouse;
     options.disableParallax = selectedDisableParallax;
+    const customProperties = {};
+    for (const definition of wallpaperPropertyDefinitions) {
+      const propertyKey = String(definition?.key || "");
+      if (propertyKey.length === 0) {
+        continue;
+      }
+      customProperties[propertyKey] = serializePropertyValue(propertyValueFor(definition), definition.type);
+    }
+    options.customProperties = customProperties;
     selectedPath = path;
 
     if (applyAllDisplays) {
@@ -397,6 +823,41 @@ Item {
 
     visibleWallpapers = items;
     Logger.d("LWEController", "Visible wallpapers refreshed", "count=", visibleWallpapers.length, "type=", selectedType, "resolution=", selectedResolution, "sort=", sortMode, "ascending=", sortAscending, "query=", query);
+  }
+
+  function refreshPagedWallpapers() {
+    const safePageSize = Math.max(1, Number(pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil(visibleWallpapers.length / safePageSize));
+    const nextPage = Math.max(0, Math.min(currentPage, totalPages - 1));
+
+    if (nextPage !== currentPage) {
+      currentPage = nextPage;
+      return;
+    }
+
+    const startIndex = nextPage * safePageSize;
+    pagedWallpapers = visibleWallpapers.slice(startIndex, startIndex + safePageSize);
+  }
+
+  function resetPagination() {
+    if (currentPage !== 0) {
+      currentPage = 0;
+      return;
+    }
+
+    refreshPagedWallpapers();
+  }
+
+  function goToPreviousPage() {
+    if (currentPage > 0) {
+      currentPage -= 1;
+    }
+  }
+
+  function goToNextPage() {
+    if (currentPage < pageCount - 1) {
+      currentPage += 1;
+    }
   }
 
   function reconcilePendingSelection() {
@@ -465,12 +926,34 @@ Item {
     refreshVisibleWallpapers();
     reconcilePendingSelection();
   }
-  onSearchTextChanged: refreshVisibleWallpapers()
-  onSelectedTypeChanged: refreshVisibleWallpapers()
-  onSelectedResolutionChanged: refreshVisibleWallpapers()
-  onSortModeChanged: refreshVisibleWallpapers()
-  onSortAscendingChanged: refreshVisibleWallpapers()
+  onVisibleWallpapersChanged: refreshPagedWallpapers()
+  onCurrentPageChanged: refreshPagedWallpapers()
+  onPageSizeChanged: refreshPagedWallpapers()
+  onSearchTextChanged: {
+    refreshVisibleWallpapers();
+    resetPagination();
+  }
+  onSelectedTypeChanged: {
+    refreshVisibleWallpapers();
+    resetPagination();
+  }
+  onSelectedResolutionChanged: {
+    refreshVisibleWallpapers();
+    resetPagination();
+  }
+  onSortModeChanged: {
+    refreshVisibleWallpapers();
+    resetPagination();
+  }
+  onSortAscendingChanged: {
+    refreshVisibleWallpapers();
+    resetPagination();
+  }
   onSelectedScreenNameChanged: syncSelectionOptionsFromScreen()
+  onPendingPathChanged: {
+    persistPanelMemory();
+    loadWallpaperProperties(pendingPath);
+  }
   onWallpapersFolderChanged: {
     if (!root.pluginApi) {
       return;
@@ -484,6 +967,7 @@ Item {
     loadPanelMemory();
     syncSelectionOptionsFromScreen();
     scanWallpapers();
+    loadWallpaperProperties(pendingPath);
   }
 
   Component.onDestruction: {
@@ -524,7 +1008,7 @@ Item {
 
       Rectangle {
         Layout.fillWidth: true
-        Layout.preferredHeight: 56 * Style.uiScaleRatio + 48 * Style.uiScaleRatio + Style.marginS * 4
+        Layout.preferredHeight: headerColumn.implicitHeight + Style.marginS * 2
         Layout.minimumHeight: Layout.preferredHeight
         radius: Style.radiusL
         color: Qt.alpha(Color.mSurfaceVariant, 0.35)
@@ -532,6 +1016,7 @@ Item {
         border.color: Qt.alpha(Color.mOutline, 0.35)
 
         ColumnLayout {
+          id: headerColumn
           anchors.fill: parent
           anchors.margins: Style.marginS
           spacing: Style.marginS
@@ -553,6 +1038,20 @@ Item {
             }
 
             Item { Layout.fillWidth: true }
+
+            NIconButton {
+              enabled: (mainInstance?.engineAvailable ?? false) && !root.scanningCompatibility
+              icon: root.scanningCompatibility ? "loader" : "shield-search"
+              colorFg: Color.mOnSurface
+              tooltipText: root.scanningCompatibility
+                ? pluginApi?.tr("panel.compatibilityQuickCheckRunning")
+                : pluginApi?.tr("panel.compatibilityQuickCheck")
+              onClicked: {
+                if (!root.scanningCompatibility) {
+                  root.pendingCompatibilityScan = true;
+                }
+              }
+            }
 
             NIconButton {
               enabled: mainInstance?.engineAvailable ?? false
@@ -599,6 +1098,39 @@ Item {
                 if (pluginApi) {
                   pluginApi.togglePanel(screen);
                 }
+              }
+            }
+          }
+
+          NBox {
+            visible: root.pendingCompatibilityScan
+            Layout.fillWidth: true
+            Layout.preferredHeight: compatibilityConfirmRow.implicitHeight + Style.marginM * 2
+
+            RowLayout {
+              id: compatibilityConfirmRow
+              anchors.fill: parent
+              anchors.margins: Style.marginM
+              spacing: Style.marginM
+
+              NText {
+                Layout.fillWidth: true
+                text: pluginApi?.tr("panel.compatibilityQuickCheckConfirm")
+                pointSize: Style.fontSizeS
+                color: Color.mOnSurface
+                wrapMode: Text.WordWrap
+              }
+
+              NButton {
+                text: pluginApi?.tr("panel.confirm")
+                enabled: !root.scanningCompatibility
+                onClicked: root.startCompatibilityScan()
+              }
+
+              NButton {
+                text: pluginApi?.tr("panel.cancel")
+                enabled: !root.scanningCompatibility
+                onClicked: root.pendingCompatibilityScan = false
               }
             }
           }
@@ -887,21 +1419,26 @@ Item {
               Layout.topMargin: Style.marginXS
               spacing: Style.marginM
 
-              GridView {
-                id: gridView
+              ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                property real minCardWidth: 244 * Style.uiScaleRatio
-                property real cardGap: Style.marginS
-                property int columnCount: Math.max(1, Math.floor((width + cardGap) / (minCardWidth + cardGap)))
-                cellWidth: (width - ((columnCount - 1) * cardGap)) / columnCount
-                cellHeight: 208 * Style.uiScaleRatio
-                boundsBehavior: Flickable.StopAtBounds
-                clip: true
+                spacing: Style.marginS
 
-                model: root.visibleWallpapers
+                GridView {
+                  id: gridView
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  property real minCardWidth: 244 * Style.uiScaleRatio
+                  property real cardGap: Style.marginS
+                  property int columnCount: Math.max(1, Math.floor((width + cardGap) / (minCardWidth + cardGap)))
+                  cellWidth: (width - ((columnCount - 1) * cardGap)) / columnCount
+                  cellHeight: 208 * Style.uiScaleRatio
+                  boundsBehavior: Flickable.StopAtBounds
+                  clip: true
 
-                delegate: Rectangle {
+                  model: root.pagedWallpapers
+
+                  delegate: Rectangle {
                   id: tileCard
                   required property var modelData
                   width: gridView.cellWidth
@@ -1001,25 +1538,6 @@ Item {
                     spacing: Style.marginXS
 
                     Rectangle {
-                      color: Qt.alpha(Color.mPrimary, 0.14)
-                      radius: Style.radiusXS
-                      implicitWidth: idBadgeText.implicitWidth + Style.marginS * 2
-                      implicitHeight: idBadgeText.implicitHeight + Style.marginXS * 2
-
-                      NText {
-                        id: idBadgeText
-                        anchors.centerIn: parent
-                        text: modelData.id
-                        color: Color.mPrimary
-                        elide: Text.ElideMiddle
-                        font.pointSize: Style.fontSizeXS
-                        font.weight: Font.Medium
-                      }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    Rectangle {
                       visible: root.resolutionBadgeIcon(modelData.resolution).length > 0
                       color: Qt.alpha(Color.mSurfaceVariant, 0.24)
                       radius: Style.radiusXS
@@ -1080,6 +1598,34 @@ Item {
                         font.weight: Font.Medium
                       }
                     }
+
+                    Rectangle {
+                      visible: root.wallpaperPropertyLoadFailedByPath[String(modelData.path || "")] === true
+                      color: Qt.alpha(Color.mError, 0.16)
+                      radius: Style.radiusXS
+                      implicitWidth: propertyFailedBadgeRow.implicitWidth + Style.marginS * 2
+                      implicitHeight: propertyFailedBadgeRow.implicitHeight + Style.marginXS * 2
+
+                      RowLayout {
+                        id: propertyFailedBadgeRow
+                        anchors.centerIn: parent
+                        spacing: Style.marginXS
+
+                        NIcon {
+                          icon: "alert-triangle"
+                          pointSize: Style.fontSizeM
+                          color: Color.mError
+                        }
+
+                        NText {
+                          text: pluginApi?.tr("panel.propertiesFailedBadge")
+                          color: Color.mError
+                          font.pointSize: Style.fontSizeXS
+                          font.weight: Font.Medium
+                        }
+                      }
+                    }
+
                   }
                   }
 
@@ -1092,29 +1638,81 @@ Item {
                   }
                 }
 
-                Rectangle {
-                  visible: root.visibleWallpapers.length === 0 && !root.scanningWallpapers
-                  anchors.centerIn: parent
-                  color: "transparent"
-                  width: 300 * Style.uiScaleRatio
-                  height: 140 * Style.uiScaleRatio
-
-                  ColumnLayout {
+                  Rectangle {
+                    visible: root.visibleWallpapers.length === 0 && !root.scanningWallpapers
                     anchors.centerIn: parent
+                    color: "transparent"
+                    width: 300 * Style.uiScaleRatio
+                    height: 140 * Style.uiScaleRatio
+
+                    ColumnLayout {
+                      anchors.centerIn: parent
+                      spacing: Style.marginS
+
+                      NIcon {
+                        Layout.alignment: Qt.AlignHCenter
+                        icon: "photo"
+                        pointSize: Style.fontSizeXL
+                        color: Color.mOnSurfaceVariant
+                      }
+
+                      NText {
+                        text: root.wallpaperItems.length === 0
+                          ? pluginApi?.tr("panel.emptyAll")
+                          : pluginApi?.tr("panel.emptyFiltered")
+                        color: Color.mOnSurfaceVariant
+                      }
+                    }
+                  }
+                }
+
+                Rectangle {
+                  Layout.fillWidth: true
+                  visible: root.paginationVisible
+                  implicitHeight: paginationRow.implicitHeight + Style.marginS * 2
+                  radius: Style.radiusM
+                  color: Qt.alpha(Color.mSurface, 0.78)
+                  border.width: Style.borderS
+                  border.color: Qt.alpha(Color.mOutline, 0.3)
+
+                  RowLayout {
+                    id: paginationRow
+                    anchors.fill: parent
+                    anchors.margins: Style.marginS
                     spacing: Style.marginS
 
-                    NIcon {
-                      Layout.alignment: Qt.AlignHCenter
-                      icon: "photo"
-                      pointSize: Style.fontSizeXL
-                      color: Color.mOnSurfaceVariant
+                    NButton {
+                      text: pluginApi?.tr("panel.prevPage")
+                      icon: "chevron-left"
+                      enabled: root.currentPage > 0
+                      onClicked: root.goToPreviousPage()
                     }
 
                     NText {
-                      text: root.wallpaperItems.length === 0
-                        ? pluginApi?.tr("panel.emptyAll")
-                        : pluginApi?.tr("panel.emptyFiltered")
+                      text: pluginApi?.tr("panel.pageSummary", {
+                        current: root.currentPageDisplay,
+                        total: root.pageCount
+                      })
+                      color: Color.mOnSurface
+                      font.weight: Font.Medium
+                    }
+
+                    NText {
+                      text: pluginApi?.tr("panel.pageRange", {
+                        start: root.currentPageStartIndex,
+                        end: root.currentPageEndIndex,
+                        total: root.visibleWallpapers.length
+                      })
                       color: Color.mOnSurfaceVariant
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    NButton {
+                      text: pluginApi?.tr("panel.nextPage")
+                      icon: "chevron-right"
+                      enabled: root.currentPage < root.pageCount - 1
+                      onClicked: root.goToNextPage()
                     }
                   }
                 }
@@ -1271,6 +1869,7 @@ Item {
                           font.weight: Font.Medium
                         }
                       }
+
                     }
 
                     RowLayout {
@@ -1498,6 +2097,210 @@ Item {
                         checked: root.selectedDisableParallax
                         onToggled: checked => root.selectedDisableParallax = checked
                       }
+
+                      ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: root.extraPropertiesEditorEnabled
+                        spacing: Style.marginS
+
+                        NDivider {
+                          Layout.fillWidth: true
+                          Layout.topMargin: Style.marginM
+                          Layout.bottomMargin: Style.marginM
+                        }
+
+                        NText {
+                          text: pluginApi?.tr("panel.sectionProperties")
+                          color: Color.mOnSurface
+                          font.weight: Font.Bold
+                          font.pointSize: Style.fontSizeM
+                        }
+
+                        NText {
+                          visible: root.loadingWallpaperProperties
+                          Layout.fillWidth: true
+                          text: pluginApi?.tr("panel.loadingProperties")
+                          color: Color.mOnSurfaceVariant
+                          wrapMode: Text.Wrap
+                        }
+
+                        NText {
+                          visible: !root.loadingWallpaperProperties && root.wallpaperPropertyError.length > 0
+                          Layout.fillWidth: true
+                          text: root.wallpaperPropertyError
+                          color: Color.mError
+                          wrapMode: Text.Wrap
+                        }
+
+                        NText {
+                          visible: !root.loadingWallpaperProperties && root.wallpaperPropertyError.length === 0 && root.wallpaperPropertyDefinitions.length === 0
+                          Layout.fillWidth: true
+                          text: pluginApi?.tr("panel.noEditableProperties")
+                          color: Color.mOnSurfaceVariant
+                          wrapMode: Text.Wrap
+                        }
+
+                        NText {
+                          visible: !root.loadingWallpaperProperties && root.wallpaperPropertyDefinitions.length > 0
+                          Layout.fillWidth: true
+                          text: pluginApi?.tr("panel.propertiesNotice")
+                          color: Color.mOnSurfaceVariant
+                          wrapMode: Text.Wrap
+                        }
+
+                        Repeater {
+                          model: root.wallpaperPropertyDefinitions
+
+                          delegate: ColumnLayout {
+                            id: propertyEditor
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: Style.marginXS
+
+                          property bool boolValue: !!root.propertyValueFor(modelData)
+                          property real sliderValue: root.numberOr(root.propertyValueFor(modelData), 0)
+                          property string comboValue: String(root.propertyValueFor(modelData))
+                          property string textValue: String(root.propertyValueFor(modelData))
+                          property color colorValue: Qt.rgba(1, 1, 1, 1)
+
+                          Component.onCompleted: {
+                            if (modelData.type === "color") {
+                              propertyEditor.colorValue = root.ensureColorValue(root.propertyValueFor(modelData));
+                            }
+                          }
+
+                          NToggle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: visible ? implicitHeight : 0
+                            visible: modelData.type === "boolean"
+                            label: modelData.label
+                            checked: propertyEditor.boolValue
+                            onToggled: checked => {
+                              if (checked === propertyEditor.boolValue) {
+                                return;
+                              }
+                              propertyEditor.boolValue = checked;
+                              root.setPropertyValue(modelData.key, checked);
+                            }
+                          }
+
+                          NValueSlider {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: visible ? implicitHeight : 0
+                            visible: modelData.type === "slider"
+                            label: modelData.label
+                            from: root.numberOr(modelData.min, 0)
+                            to: root.numberOr(modelData.max, 100)
+                            stepSize: Math.max(root.numberOr(modelData.step, 1), 0.001)
+                            value: propertyEditor.sliderValue
+                            text: root.formatSliderValue(propertyEditor.sliderValue, modelData.step)
+                            onMoved: value => {
+                              if (value === propertyEditor.sliderValue) {
+                                return;
+                              }
+                              propertyEditor.sliderValue = value;
+                              root.setPropertyValue(modelData.key, value);
+                            }
+                          }
+
+                          NComboBox {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: visible ? implicitHeight : 0
+                            visible: modelData.type === "combo"
+                            label: modelData.label
+                            model: root.comboChoicesFor(modelData)
+                            currentKey: propertyEditor.comboValue
+                            onSelected: key => {
+                              const normalizedKey = String(key);
+                              if (normalizedKey === propertyEditor.comboValue) {
+                                return;
+                              }
+                              propertyEditor.comboValue = normalizedKey;
+                              root.setPropertyValue(modelData.key, normalizedKey);
+                            }
+                          }
+
+                          NTextInput {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: visible ? implicitHeight : 0
+                            visible: modelData.type === "textinput"
+                            label: modelData.label
+                            text: propertyEditor.textValue
+                            onEditingFinished: {
+                              const nextText = String(text);
+                              if (nextText === propertyEditor.textValue) {
+                                return;
+                              }
+                              propertyEditor.textValue = nextText;
+                              root.setPropertyValue(modelData.key, nextText);
+                            }
+                            onAccepted: {
+                              const nextText = String(text);
+                              if (nextText === propertyEditor.textValue) {
+                                return;
+                              }
+                              propertyEditor.textValue = nextText;
+                              root.setPropertyValue(modelData.key, nextText);
+                            }
+                          }
+
+                          NText {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: visible ? implicitHeight : 0
+                            visible: modelData.type === "text"
+                            text: modelData.label
+                            color: Color.mPrimary
+                            font.pointSize: Style.fontSizeM
+                            font.weight: Font.Bold
+                            wrapMode: Text.Wrap
+                            topPadding: Style.marginXS
+                            bottomPadding: Style.marginXS
+                          }
+
+                          ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: visible ? implicitHeight : 0
+                            visible: modelData.type === "color"
+                            spacing: Style.marginXS
+
+                            NText {
+                              Layout.fillWidth: true
+                              text: modelData.label
+                              color: Color.mOnSurface
+                              font.pointSize: Style.fontSizeM
+                              wrapMode: Text.Wrap
+                            }
+
+                            Rectangle {
+                              Layout.fillWidth: true
+                              Layout.preferredHeight: Style.baseWidgetSize
+                              radius: Style.radiusM
+                              color: propertyEditor.colorValue
+                              border.width: Style.borderS
+                              border.color: Qt.alpha(Color.mOutline, 0.35)
+                            }
+
+                            NColorPicker {
+                              screen: pluginApi?.panelOpenScreen
+                              Layout.fillWidth: true
+                              Layout.preferredHeight: Style.baseWidgetSize
+                              selectedColor: propertyEditor.colorValue
+                              onColorSelected: color => {
+                                propertyEditor.colorValue = color;
+                                root.setPropertyValue(modelData.key, color);
+                              }
+                            }
+
+                            NText {
+                              Layout.fillWidth: true
+                              text: root.serializePropertyValue(propertyEditor.colorValue, "color")
+                              color: Color.mOnSurfaceVariant
+                              font.pointSize: Style.fontSizeS
+                            }
+                          }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -1698,6 +2501,95 @@ Item {
           onClicked: root.applySortAction(modelData.action)
         }
       }
+    }
+  }
+
+  Process {
+    id: wallpaperPropertyProcess
+
+    stdout: StdioCollector {
+      id: wallpaperPropertyStdout
+    }
+
+    stderr: StdioCollector {
+      id: wallpaperPropertyStderr
+    }
+
+    onExited: function(exitCode) {
+      const requestPath = root.wallpaperPropertyRequestPath;
+      root.loadingWallpaperProperties = false;
+
+      const outputText = [String(wallpaperPropertyStdout.text || ""), String(wallpaperPropertyStderr.text || "")]
+        .filter(part => part.trim().length > 0)
+        .join("\n");
+
+      if (requestPath.length === 0 || requestPath !== String(root.pendingPath || "")) {
+        Logger.d("LWEController", "Ignoring stale wallpaper property result", "requestPath=", requestPath, "pendingPath=", root.pendingPath, "exitCode=", exitCode);
+        return;
+      }
+
+      if (exitCode !== 0) {
+        root.wallpaperPropertyDefinitions = [];
+        root.wallpaperPropertyValues = ({});
+        root.setWallpaperPropertyLoadFailed(requestPath, true);
+        root.wallpaperPropertyError = pluginApi?.tr("panel.propertiesLoadFailed");
+        Logger.w("LWEController", "Wallpaper properties load failed", "path=", requestPath, "exitCode=", exitCode, "stderr=", wallpaperPropertyStderr.text);
+        return;
+      }
+
+      const definitions = root.parseWallpaperPropertiesOutput(outputText);
+      root.setWallpaperPropertyLoadFailed(requestPath, false);
+      root.wallpaperPropertyDefinitions = definitions;
+      for (const definition of definitions) {
+        if (definition.type === "combo") {
+          Logger.d("LWEController", "Combo property parsed", "key=", definition.key, "choices=", JSON.stringify(root.comboChoicesFor(definition)));
+        }
+      }
+
+      const savedProperties = mainInstance?.getWallpaperProperties(requestPath) || ({});
+      const nextValues = {};
+      for (const definition of definitions) {
+        const propertyKey = String(definition.key || "");
+        if (savedProperties[propertyKey] !== undefined) {
+          nextValues[propertyKey] = root.parsePropertyValue(savedProperties[propertyKey], definition.type);
+        } else {
+          nextValues[propertyKey] = definition.defaultValue;
+        }
+      }
+      root.wallpaperPropertyValues = nextValues;
+      root.wallpaperPropertyError = "";
+      Logger.i("LWEController", "Wallpaper properties loaded", "path=", requestPath, "count=", definitions.length);
+    }
+  }
+
+  Process {
+    id: compatibilityScanProcess
+
+    stdout: StdioCollector {
+      id: compatibilityScanStdout
+    }
+
+    stderr: StdioCollector {
+      id: compatibilityScanStderr
+    }
+
+    onExited: function(exitCode) {
+      root.scanningCompatibility = false;
+
+      const stdoutText = String(compatibilityScanStdout.text || "");
+      const stderrText = String(compatibilityScanStderr.text || "").trim();
+
+      if (exitCode !== 0) {
+        if (stderrText.length > 0) {
+          Logger.w("LWEController", "Compatibility scan failed", "exitCode=", exitCode, "stderr=", stderrText);
+        } else {
+          Logger.w("LWEController", "Compatibility scan failed", "exitCode=", exitCode);
+        }
+        return;
+      }
+
+      root.applyCompatibilityScanOutput(stdoutText);
+      Logger.i("LWEController", "Compatibility scan completed", "failedCount=", Object.keys(root.wallpaperPropertyLoadFailedByPath || ({})).length);
     }
   }
 
