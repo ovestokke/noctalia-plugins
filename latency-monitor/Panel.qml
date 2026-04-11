@@ -136,7 +136,7 @@ Item {
           NButton {
             text: modelData.name
             fontSize: Style.fontSizeXS
-            color: root._activeHost == index ? Color.mPrimary : Color.mSecondary
+            backgroundColor: root._activeHost == index ? Color.mPrimary : Color.mSecondary
             tooltipText: modelData.address
             onClicked: {
               root._activeHost = index;
