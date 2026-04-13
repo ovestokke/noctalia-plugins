@@ -43,7 +43,9 @@
   },
   "errors": {
     "weatherDisabled": "Enable weather in Noctalia settings or use custom coordinates",
-    "locationUnavailable": "Location not available yet, retrying..."
+    "locationUnavailable": "Location not available yet, retrying...",
+    "aqicnTokenMissing": "AQICN selected but no API token configured",
+    "aqicnApiFailed": "AQICN API error"
   },
   "panel": {
     "title": "Air Quality",
@@ -68,7 +70,14 @@
     "refreshInterval": "Refresh interval",
     "refreshIntervalDesc": "Minutes between updates: ",
     "boldText": "Bold text",
-    "boldTextDesc": "Display the AQI number in bold"
+    "boldTextDesc": "Display the AQI number in bold",
+    "dataSource": "Data source",
+    "dataSourceDesc": "Choose where air quality data comes from",
+    "dataSourceOpenMeteo": "Open-Meteo (no key needed)",
+    "dataSourceAqicn": "AQICN (real station data)",
+    "aqicnToken": "AQICN API Token",
+    "aqicnTokenDesc": "Get your free token at aqicn.org/data-platform/token",
+    "aqicnTokenPlaceholder": "Paste your token here"
   },
   "desktop": {
     "noData": "No data",

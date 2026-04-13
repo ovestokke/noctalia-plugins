@@ -17,8 +17,58 @@ ColumnLayout {
   property string editCustomLongitude: cfg.customLongitude ?? defaults.customLongitude ?? ""
   property int editRefreshInterval: cfg.refreshInterval ?? defaults.refreshInterval ?? 30
   property bool editBoldText: cfg.boldText ?? defaults.boldText ?? true
+  property string editDataSource: cfg.dataSource ?? defaults.dataSource ?? "open-meteo"
+  property string editAqicnToken: cfg.aqicnToken ?? defaults.aqicnToken ?? ""
 
   spacing: Style.marginM
+
+  // --- Data Source ---
+  RowLayout {
+    Layout.fillWidth: true
+    spacing: Style.marginM
+
+    ColumnLayout {
+      Layout.fillWidth: true
+      spacing: Style.marginXS
+
+      NText {
+        text: pluginApi?.tr("settings.dataSource")
+        pointSize: Style.fontSizeM
+        color: Color.mOnSurface
+      }
+
+      NText {
+        text: pluginApi?.tr("settings.dataSourceDesc")
+        pointSize: Style.fontSizeS
+        color: Color.mOnSurfaceVariant
+      }
+    }
+
+    NComboBox {
+      Layout.preferredWidth: 260 * Style.uiScaleRatio
+      Layout.preferredHeight: Style.baseWidgetSize
+      model: [
+        { key: "open-meteo", name: pluginApi?.tr("settings.dataSourceOpenMeteo") },
+        { key: "aqicn", name: pluginApi?.tr("settings.dataSourceAqicn") }
+      ]
+      currentKey: root.editDataSource
+      onSelected: key => {
+        root.editDataSource = key
+        if (key === "aqicn") root.editAqiScale = "us"
+      }
+    }
+  }
+
+  // --- AQICN Token ---
+  NTextInput {
+    Layout.fillWidth: true
+    visible: root.editDataSource === "aqicn"
+    label: pluginApi?.tr("settings.aqicnToken")
+    description: pluginApi?.tr("settings.aqicnTokenDesc")
+    placeholderText: pluginApi?.tr("settings.aqicnTokenPlaceholder")
+    text: root.editAqicnToken
+    onTextChanged: root.editAqicnToken = text
+  }
 
   // --- AQI Scale ---
   RowLayout {
@@ -45,6 +95,7 @@ ColumnLayout {
     NComboBox {
       Layout.preferredWidth: 180 * Style.uiScaleRatio
       Layout.preferredHeight: Style.baseWidgetSize
+      enabled: root.editDataSource !== "aqicn"
       model: [
         { key: "us", name: pluginApi?.tr("settings.aqiScaleUs") },
         { key: "eu", name: pluginApi?.tr("settings.aqiScaleEu") }
@@ -134,8 +185,12 @@ ColumnLayout {
         || pluginApi.pluginSettings.customLatitude !== root.editCustomLatitude
         || pluginApi.pluginSettings.customLongitude !== root.editCustomLongitude
     var scaleChanged = pluginApi.pluginSettings.aqiScale !== root.editAqiScale
+    var dataSourceChanged = pluginApi.pluginSettings.dataSource !== root.editDataSource
+        || pluginApi.pluginSettings.aqicnToken !== root.editAqicnToken
 
     pluginApi.pluginSettings.aqiScale = root.editAqiScale
+    pluginApi.pluginSettings.dataSource = root.editDataSource
+    pluginApi.pluginSettings.aqicnToken = root.editAqicnToken
     pluginApi.pluginSettings.useNoctaliaLocation = root.editUseNoctaliaLocation
     pluginApi.pluginSettings.customLatitude = root.editCustomLatitude
     pluginApi.pluginSettings.customLongitude = root.editCustomLongitude
@@ -144,8 +199,8 @@ ColumnLayout {
 
     pluginApi.saveSettings()
 
-    // Only refresh if location or scale changed
-    if (locationChanged || scaleChanged) {
+    // Only refresh if location, scale, or data source changed
+    if (locationChanged || scaleChanged || dataSourceChanged) {
       root.pluginApi.mainInstance?.refresh()
     }
 

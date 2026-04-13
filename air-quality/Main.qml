@@ -26,10 +26,13 @@ Item {
   property bool loading: false
   property bool hasData: false
   property string errorMessage: ""
+  property string stationName: ""
 
   // Current scale from settings
   readonly property string aqiScale: cfg.aqiScale ?? defaults.aqiScale ?? "us"
   readonly property bool useNoctaliaLocation: cfg.useNoctaliaLocation ?? defaults.useNoctaliaLocation ?? true
+  readonly property string dataSource: cfg.dataSource ?? defaults.dataSource ?? "open-meteo"
+  readonly property string aqicnToken: cfg.aqicnToken ?? defaults.aqicnToken ?? ""
 
   Component.onCompleted: {
     Logger.i("Air Quality", "Plugin loaded, starting initial fetch...")
@@ -110,6 +113,54 @@ Item {
     }
   }
 
+  Process {
+    id: aqicnFetchProcess
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode !== 0) {
+        Logger.w("Air Quality", "AQICN curl exited with code " + exitCode)
+        root.loading = false
+      }
+    }
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var output = this.text.trim()
+        if (!output) {
+          Logger.w("Air Quality", "Empty response from AQICN API")
+          root.loading = false
+          return
+        }
+        try {
+          var response = JSON.parse(output)
+          if (response.status !== "ok") {
+            root.errorMessage = pluginApi?.tr("errors.aqicnApiFailed")
+            Logger.w("Air Quality", "AQICN API error: " + (response.data ?? "unknown"))
+            root.loading = false
+            return
+          }
+          var data = response.data
+          root.usAqi = data.aqi ?? 0
+          root.europeanAqi = 0
+          root.pm25 = data.iaqi?.pm25?.v ?? 0
+          root.pm10 = data.iaqi?.pm10?.v ?? 0
+          root.ozone = data.iaqi?.o3?.v ?? 0
+          root.no2 = data.iaqi?.no2?.v ?? 0
+          root.co = data.iaqi?.co?.v ?? 0
+          root.so2 = data.iaqi?.so2?.v ?? 0
+          root.stationName = data.city?.name ?? ""
+          root.hasData = true
+
+          var now = new Date()
+          root.lastUpdate = Qt.formatTime(now, "HH:mm")
+
+          Logger.i("Air Quality", "AQICN data updated — AQI: " + root.usAqi + " Station: " + root.stationName)
+        } catch (e) {
+          Logger.e("Air Quality", "Failed to parse AQICN response: " + e.message)
+        }
+        root.loading = false
+      }
+    }
+  }
+
   // Get current AQI value based on selected scale
   function getAqi() {
     return aqiScale === "eu" ? europeanAqi : usAqi
@@ -157,6 +208,9 @@ Item {
 
   // Get location name for display
   function getLocationName() {
+    if (dataSource === "aqicn" && stationName) {
+      return stationName
+    }
     if (useNoctaliaLocation) {
       var name = Settings.data.location?.name ?? ""
       if (name) {
@@ -220,9 +274,24 @@ Item {
     }
 
     root.loading = true
-    var url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + lat + "&longitude=" + lon + "&current=us_aqi,european_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide&timezone=auto"
-    Logger.d("Air Quality", "Fetching: " + url)
-    fetchProcess.command = ["curl", "-s", url]
-    fetchProcess.running = true
+    root.stationName = ""
+
+    if (root.dataSource === "aqicn") {
+      if (!root.aqicnToken) {
+        root.errorMessage = pluginApi?.tr("errors.aqicnTokenMissing")
+        Logger.w("Air Quality", "AQICN token not configured")
+        root.loading = false
+        return
+      }
+      var aqicnUrl = "https://api.waqi.info/feed/geo:" + lat + ";" + lon + "/?token=" + root.aqicnToken
+      Logger.d("Air Quality", "Fetching AQICN data for geo:" + lat + ";" + lon)
+      aqicnFetchProcess.command = ["curl", "-s", aqicnUrl]
+      aqicnFetchProcess.running = true
+    } else {
+      var url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=" + lat + "&longitude=" + lon + "&current=us_aqi,european_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide&timezone=auto"
+      Logger.d("Air Quality", "Fetching Open-Meteo: " + url)
+      fetchProcess.command = ["curl", "-s", url]
+      fetchProcess.running = true
+    }
   }
 }
