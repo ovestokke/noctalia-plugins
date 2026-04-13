@@ -11,6 +11,7 @@ DraggableDesktopWidget {
     id: root
     property var pluginApi: null
 
+    // Updated dimensions
     readonly property real _width: Math.round(320 * widgetScale)
     readonly property real _height: Math.round(200 * widgetScale)
 
@@ -19,6 +20,7 @@ DraggableDesktopWidget {
 
     property string calendarVal: ""
 
+    // Main data process
     Process {
         id: calProc
         command: ["sh", "-c", "khal list today 7d --format '{start-end-time-style} {title}' --day-format '{name}, {date}'"]
@@ -28,12 +30,19 @@ DraggableDesktopWidget {
         }
     }
 
+    // Universal terminal launcher (Handles -e and -- syntax)
     Process {
         id: openIkhal
-        // command: ["kitty", "--config",  "~/.config/kitty/calendar.conf", "--class",  "khal", "-e", "ikhal"]
-        command: ["kitty",  "--class",  "khal", "-e", "ikhal"]
-            }
+        command: [
+            "sh", "-c",
+            "for term in xdg-terminal-exec kitty alacritty foot gnome-terminal konsole st xterm; do " +
+            "if command -v $term >/dev/null 2>&1; then " +
+            "exec $term -e ikhal 2>/dev/null || exec $term -- ikhal; " +
+            "break; fi; done"
+        ]
+    }
 
+    // Refresh every minute
     Timer {
         interval: 60000
         running: root.pluginApi !== null
@@ -54,20 +63,26 @@ DraggableDesktopWidget {
             anchors.fill: parent
             anchors.margins: Style.marginL
 
+            // Render only when API is ready to ensure translations work correctly
+            visible: root.pluginApi !== null
+
             RowLayout {
                 Layout.fillWidth: true
 
                 NText {
-                    text: pluginApi.tr("widget.heading")
+                    text: root.pluginApi.tr("widget.heading")
                     color: Color.mOnSurfaceVariant
                     font.pointSize: Style.fontSizeL * widgetScale
                     Layout.fillWidth: true
                 }
 
-                Button {
-                    text: pluginApi.tr("widget.button")
-                    flat: true
-                    background: null
+                NIconButton {
+                    // Strict translation: no fallback string used here
+                    icon: root.pluginApi.tr("widget.button")
+
+                    Layout.preferredWidth: 32 * widgetScale
+                    Layout.preferredHeight: 32 * widgetScale
+
                     onClicked: {
                         openIkhal.running = false
                         openIkhal.running = true
@@ -75,19 +90,25 @@ DraggableDesktopWidget {
                 }
             }
 
-            ScrollView {
+            NScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
+
+                // Force horizontal scrollbar off
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                 NText {
-                    width: parent.width - 10
-                    text: root.calendarVal !== "" ? root.calendarVal : pluginApi.tr("widget.no_events")
+                    // Force the text width to match the ScrollView's width
+                    width: parent.width
+                    text: root.calendarVal !== "" ? root.calendarVal : root.pluginApi.tr("widget.loading")
+
                     color: Color.mOnSurface
                     font.pointSize: Style.fontSizeL * widgetScale
-                    wrapMode: Text.NoWrap
-                    elide: Text.ElideRight
+
+                    // WrapMode should be Wrap if you want to see everything,
+                    // or NoWrap with Elide if you want to keep lines single.
+                    wrapMode: Text.Wrap
                     font.family: "Monospace"
                 }
             }
