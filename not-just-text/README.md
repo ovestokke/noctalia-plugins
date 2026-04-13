@@ -21,16 +21,7 @@ Lines starting with `# ` (hash + space) and blank lines are ignored, so `#hashta
 
 ## Fortune mode
 
-Requires `fortune` to be installed:
-
-```bash
-# Arch
-sudo pacman -S fortune-mod
-
-# Debian/Ubuntu
-sudo apt install fortune-mod
-```
-
+Requires `fortune` to be installed.
 Quotes are filtered to single-line entries up to a configurable character limit (default: 60). If no suitable quote is found after 10 attempts, the widget displays `(╯°□°）╯︵ ┻━┻`.
 
 ## Settings
