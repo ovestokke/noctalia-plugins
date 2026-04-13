@@ -30,15 +30,18 @@ DraggableDesktopWidget {
         }
     }
 
-    // Universal terminal launcher (Handles -e and -- syntax)
+    // Universal terminal launcher (Handles -e and -- syntax) but has the class for kitty alone
     Process {
         id: openIkhal
         command: [
             "sh", "-c",
             "for term in xdg-terminal-exec kitty alacritty foot gnome-terminal konsole st xterm; do " +
             "if command -v $term >/dev/null 2>&1; then " +
+            "if [ \"$term\" = \"kitty\" ]; then " +
+            "exec kitty --class khal -e ikhal; " +
+            "else " +
             "exec $term -e ikhal 2>/dev/null || exec $term -- ikhal; " +
-            "break; fi; done"
+            "fi; break; fi; done"
         ]
     }
 
