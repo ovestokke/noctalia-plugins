@@ -1488,7 +1488,7 @@
     {
       "id": "tailscale",
       "name": "Tailscale",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "official": false,
       "author": "nineluj",
       "description": "Show Tailscale status in the menu bar and send/receive files via Taildrop.",
@@ -1500,7 +1500,7 @@
         "Network",
         "Panel"
       ],
-      "lastUpdated": "2026-03-28T17:10:20-04:00"
+      "lastUpdated": "2026-04-14T20:51:03+07:00"
     },
     {
       "id": "tamagotchi",
