@@ -3,6 +3,12 @@
     "heads": "Орел",
     "tails": "Решка"
   },
+  "settings": {
+    "delay":{
+      "label": "Задержка",
+      "description": "Задержка между кадрами"
+    }
+  },
   "widget": {
     "tooltip": "Бросок монеты"
   }

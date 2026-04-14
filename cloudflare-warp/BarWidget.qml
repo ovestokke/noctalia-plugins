@@ -2,8 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs.Commons
-import qs.Widgets
 import qs.Services.UI
+import qs.Widgets
 
 Item {
   id: root
@@ -18,31 +18,27 @@ Item {
   readonly property bool pillDirection: BarService.getPillDirection(root)
   readonly property var mainInstance: pluginApi?.mainInstance
 
-  readonly property string connectedColorKey: pluginApi?.pluginSettings?.connectedColor
-    ?? pluginApi?.manifest?.metadata?.defaultSettings?.connectedColor
-    ?? "primary"
+  readonly property string connectedColorKey: pluginApi?.pluginSettings?.connectedColor ?? pluginApi?.manifest?.metadata?.defaultSettings?.connectedColor ?? "primary"
 
-  readonly property string disconnectedColorKey: pluginApi?.pluginSettings?.disconnectedColor
-    ?? pluginApi?.manifest?.metadata?.defaultSettings?.disconnectedColor
-    ?? "none"
+  readonly property string disconnectedColorKey: pluginApi?.pluginSettings?.disconnectedColor ?? pluginApi?.manifest?.metadata?.defaultSettings?.disconnectedColor ?? "none"
 
   readonly property color resolvedIconColor: {
-    var key = (mainInstance?.warpConnected ?? false) ? connectedColorKey : disconnectedColorKey
-    var resolved = Color.resolveColorKeyOptional(key)
+    var key = (mainInstance?.warpConnected ?? false) ? connectedColorKey : disconnectedColorKey;
+    var resolved = Color.resolveColorKeyOptional(key);
     // resolveColorKeyOptional ritorna "transparent" per "none" — fallback al colore neutro
     if (!resolved || resolved === "transparent" || resolved.a === 0)
-      return mouseArea.containsMouse ? Color.mOnHover : Color.mOnSurface
-    return resolved
+      return mouseArea.containsMouse ? Color.mOnHover : Color.mOnSurface;
+    return resolved;
   }
 
   readonly property real contentWidth: {
     if (!(mainInstance?.warpInstalled ?? false)) {
-      return Style.capsuleHeight
+      return Style.capsuleHeight;
     }
     if ((mainInstance?.warpMode ?? "") !== "") {
-      return contentRow.implicitWidth + Style.marginM * 2
+      return contentRow.implicitWidth + Style.marginM * 2;
     }
-    return Style.capsuleHeight
+    return Style.capsuleHeight;
   }
   readonly property real contentHeight: Style.capsuleHeight
 
@@ -65,12 +61,12 @@ Item {
       layoutDirection: Qt.LeftToRight
 
       Item {
-        implicitWidth: Style.fontSizeXXXL
-        implicitHeight: Style.fontSizeXXXL
+        implicitWidth: Style.fontSizeXXL
+        implicitHeight: Style.fontSizeXXL
 
         CloudflareIcon {
           anchors.fill: parent
-          pointSize: Style.fontSizeXXXL
+          pointSize: Style.fontSizeXXL
           applyUiScale: false
           color: root.resolvedIconColor
           opacity: (mainInstance?.isRefreshing ?? false) ? 0.5 : 1.0
@@ -89,8 +85,7 @@ Item {
       }
 
       NText {
-        visible: (mainInstance?.warpInstalled ?? false)
-          && (mainInstance?.warpMode ?? "") !== ""
+        visible: (mainInstance?.warpInstalled ?? false) && (mainInstance?.warpMode ?? "") !== ""
         text: mainInstance?.warpMode ?? ""
         pointSize: Style.fontSizeXS
         color: root.resolvedIconColor
@@ -105,9 +100,7 @@ Item {
 
     model: [
       {
-        "label": (mainInstance?.warpConnected ?? false)
-          ? pluginApi?.tr("context.disconnect")
-          : pluginApi?.tr("context.connect"),
+        "label": (mainInstance?.warpConnected ?? false) ? pluginApi?.tr("context.disconnect") : pluginApi?.tr("context.connect"),
         "action": "toggle-warp",
         "icon": (mainInstance?.warpConnected ?? false) ? "plug-x" : "plug",
         "enabled": mainInstance?.warpInstalled ?? false

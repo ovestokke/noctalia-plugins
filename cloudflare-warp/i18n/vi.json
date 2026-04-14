@@ -4,7 +4,7 @@
     "disconnect": "Ngắt kết nối"
   },
   "actions": {
-    "widget-settings": "Cài đặt widget"
+    "widget-settings": "Cài đặt tiện ích"
   },
   "panel": {
     "title": "Cloudflare WARP",

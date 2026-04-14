@@ -1,7 +1,7 @@
 {
   "id": "cloudflare-warp",
   "name": "Cloudflare WARP",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minNoctaliaVersion": "4.0.0",
   "author": "ToRvaLDz",
   "license": "MIT",

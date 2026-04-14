@@ -14,6 +14,7 @@ Item {
     readonly property bool allowAttach: true
     property real contentPreferredWidth: 200 * Style.uiScaleRatio
     property real contentPreferredHeight: 200 * Style.uiScaleRatio
+    property int delay: pluginApi?.pluginSettings?.delay ?? 20
 
     anchors.fill: parent
 
@@ -66,7 +67,7 @@ Item {
 
                     Timer {
                         id: flipTimer
-                        interval: 20
+                        interval: delay
                         repeat: true
                         running: coinItem.flipping
                         onTriggered: {
