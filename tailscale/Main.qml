@@ -127,6 +127,13 @@ Item {
     return label || hostName;
   }
 
+  // Extract the Tailscale short name from DNSName (e.g. "tp-g6.tail68e513.ts.net." → "tp-g6").
+  // This is what `tailscale file cp` and other commands expect as a target.
+  function tailscaleName(dnsName) {
+    if (!dnsName) return ""
+    return dnsName.split(".")[0] || ""
+  }
+
   Process {
     id: whichProcess
     stdout: StdioCollector {}
