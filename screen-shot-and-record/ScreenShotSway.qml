@@ -98,6 +98,7 @@ ScreenShot {
 
     function collectWorkspaceWindows(workspaceNode, result) {
         const stack = [workspaceNode]
+        const seenWindowKeys = ({})
         while (stack.length > 0) {
             const node = stack.pop()
             if (!node) {
@@ -106,31 +107,44 @@ ScreenShot {
 
             const nodes = node.nodes ?? []
             const floatingNodes = node.floating_nodes ?? []
-            for (let i = 0; i < nodes.length; i++) {
-                stack.push(nodes[i])
-            }
             for (let i = 0; i < floatingNodes.length; i++) {
                 stack.push(floatingNodes[i])
             }
+            for (let i = 0; i < nodes.length; i++) {
+                stack.push(nodes[i])
+            }
 
             const isCon = node.type === "con"
+            const isFloatingCon = node.type === "floating_con"
             const isLeaf = nodes.length === 0 && floatingNodes.length === 0
             const rect = node.rect
             const hasRect = rect && Number(rect.width) > 0 && Number(rect.height) > 0
             const hasWindowMeta = node.app_id || node.window || node.window_properties
+            const isSelectableWindowNode = (isCon || isFloatingCon) && isLeaf && hasWindowMeta
 
-            if (!isCon || !isLeaf || !hasRect || !hasWindowMeta) {
+            if (!isSelectableWindowNode || !hasRect) {
                 continue
             }
+
+            const windowTitle = String(node.name ?? "")
+            const windowClass = String(node.app_id ?? node.window_properties?.class ?? "")
+            const windowAddress = String(node.id ?? "")
+            const dedupeKey = windowAddress !== ""
+                              ? windowAddress
+                              : [Number(rect.x), Number(rect.y), Number(rect.width), Number(rect.height), windowTitle, windowClass].join("|")
+            if (seenWindowKeys[dedupeKey]) {
+                continue
+            }
+            seenWindowKeys[dedupeKey] = true
 
             result.push({
                 x: Number(rect.x) - root.monitorOffsetX,
                 y: Number(rect.y) - root.monitorOffsetY,
                 width: Number(rect.width),
                 height: Number(rect.height),
-                title: String(node.name ?? ""),
-                cls: String(node.app_id ?? node.window_properties?.class ?? ""),
-                address: String(node.id ?? "")
+                title: windowTitle,
+                cls: windowClass,
+                address: windowAddress
             })
         }
     }
