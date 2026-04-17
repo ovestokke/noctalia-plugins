@@ -136,6 +136,51 @@ function buildApplyCommand(outputs, cfg, defaults) {
   };
 }
 
+function buildConfigFileContent(outputs) {
+  if (!outputs || outputs.length === 0) {
+    return {
+      "error": "No outputs available to configure."
+    };
+  }
+
+  var lines = [];
+  for (var index = 0; index < outputs.length; index++) {
+    var output = outputs[index];
+    if (!output || output.active === false) {
+      continue;
+    }
+
+    var resolution = output.width + "x" + output.height;
+    var refresh = formatRefreshForCommand(output.refresh);
+    if (refresh === null) {
+      return {
+        "error": "Refusing to generate config for invalid refresh rate for output '" + output.name + "'."
+      };
+    }
+
+    if (refresh !== "") {
+      resolution += "@" + refresh;
+    }
+
+    var position = Math.round(output.x) + "x" + Math.round(output.y);
+    var scale = sanitizeNumber(output.scale || 1);
+
+    // Hyprland config format: monitor=NAME,RESOLUTION,POSITION,SCALE
+    var line = "monitor=" + output.name + "," + resolution + "," + position + "," + scale;
+    lines.push(line);
+  }
+
+  if (lines.length === 0) {
+    return {
+      "error": "There are no active outputs to configure."
+    };
+  }
+
+  return {
+    "content": lines.join("\n")
+  };
+}
+
 function buildCommonModes(currentWidth, currentHeight, currentRefresh) {
   var normalizedRefresh = normalizeRefreshRate(currentRefresh);
   var commonRes = [

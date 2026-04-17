@@ -161,6 +161,48 @@ function buildApplyCommand(outputs, cfg, defaults) {
   };
 }
 
+function buildConfigFileContent(outputs) {
+  if (!outputs || outputs.length === 0) {
+    return {
+      "error": "No outputs available to configure."
+    };
+  }
+
+  var lines = [];
+  for (var index = 0; index < outputs.length; index++) {
+    var output = outputs[index];
+    if (!output || output.active === false) {
+      continue;
+    }
+
+    var resolution = output.width + "x" + output.height;
+    if (output.refresh && output.refresh > 0) {
+      resolution += "@" + refreshToHzString(output.refresh) + "Hz";
+    }
+
+    var line = "output " + output.name +
+      " mode " + resolution +
+      " position " + Math.round(output.x) + "," + Math.round(output.y) +
+      " scale " + sanitizeNumber(output.scale || 1);
+
+    if (output.transform && output.transform !== "normal") {
+      line += " transform " + output.transform;
+    }
+
+    lines.push(line);
+  }
+
+  if (lines.length === 0) {
+    return {
+      "error": "There are no active outputs to configure."
+    };
+  }
+
+  return {
+    "content": lines.join("\n")
+  };
+}
+
 function modeIdFromMode(mode, width, height, refresh) {
   var modeWidth = width || mode.width || 0;
   var modeHeight = height || mode.height || 0;

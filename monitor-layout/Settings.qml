@@ -20,56 +20,62 @@ ColumnLayout {
 
   spacing: Style.marginL
 
-  NComboBox {
+  ColumnLayout {
+    spacing: Style.marginM
     Layout.fillWidth: true
-    label: pluginApi?.tr("settings.backend.label")
-    description: pluginApi?.tr("settings.backend.desc")
-    model: [
-      { "key": "auto", "name": pluginApi?.tr("settings.backend.auto") },
-      { "key": "sway", "name": pluginApi?.tr("settings.backend.sway") },
-      { "key": "hyprland", "name": pluginApi?.tr("settings.backend.hyprland") }
-    ]
-    currentKey: root.editBackend
-    onSelected: key => root.editBackend = key
-  }
 
-  NTextInput {
-    Layout.fillWidth: true
-    label: pluginApi?.tr("settings.swayCommand.label")
-    description: pluginApi?.tr("settings.swayCommand.desc")
-    text: root.editSwayCommand
-    onTextChanged: root.editSwayCommand = text
-  }
+    NComboBox {
+      Layout.fillWidth: true
+      label: pluginApi?.tr("settings.backend.label")
+      description: pluginApi?.tr("settings.backend.desc")
+      model: [
+        { "key": "auto", "name": pluginApi?.tr("settings.backend.auto") },
+        { "key": "sway", "name": pluginApi?.tr("settings.backend.sway") },
+        { "key": "hyprland", "name": pluginApi?.tr("settings.backend.hyprland") }
+      ]
+      currentKey: root.editBackend
+      onSelected: key => root.editBackend = key
+    }
 
-  NTextInput {
-    Layout.fillWidth: true
-    label: pluginApi?.tr("settings.hyprctlCommand.label")
-    description: pluginApi?.tr("settings.hyprctlCommand.desc")
-    text: root.editHyprctlCommand
-    onTextChanged: root.editHyprctlCommand = text
-  }
+    NTextInput {
+      Layout.fillWidth: true
+      label: pluginApi?.tr("settings.swayCommand.label")
+      description: pluginApi?.tr("settings.swayCommand.desc")
+      text: root.editSwayCommand
+      onTextChanged: root.editSwayCommand = text
+    }
 
-  NToggle {
-    text: pluginApi?.tr("settings.snapToGrid.label")
-    checked: root.editSnapToGrid
-    onToggled: checked => root.editSnapToGrid = checked
-  }
+    NTextInput {
+      Layout.fillWidth: true
+      label: pluginApi?.tr("settings.hyprctlCommand.label")
+      description: pluginApi?.tr("settings.hyprctlCommand.desc")
+      text: root.editHyprctlCommand
+      onTextChanged: root.editHyprctlCommand = text
+    }
 
-  NTextInput {
-    Layout.fillWidth: true
-    label: pluginApi?.tr("settings.gridSize.label")
-    description: pluginApi?.tr("settings.gridSize.desc")
-    text: root.editGridSize
-    onTextChanged: root.editGridSize = text
-  }
+    NToggle {
+      Layout.fillWidth: true
+      label: pluginApi?.tr("settings.snapToGrid.label")
+      checked: root.editSnapToGrid
+      onToggled: checked => root.editSnapToGrid = checked
+    }
 
-  NComboBox {
-    Layout.fillWidth: true
-    label: pluginApi?.tr("settings.iconColor.label")
-    description: pluginApi?.tr("settings.iconColor.desc")
-    model: Color.colorKeyModel
-    currentKey: root.editIconColor
-    onSelected: key => root.editIconColor = key
+    NTextInput {
+      Layout.fillWidth: true
+      label: pluginApi?.tr("settings.gridSize.label")
+      description: pluginApi?.tr("settings.gridSize.desc")
+      text: root.editGridSize
+      onTextChanged: root.editGridSize = text
+    }
+
+    NComboBox {
+      Layout.fillWidth: true
+      label: pluginApi?.tr("settings.iconColor.label")
+      description: pluginApi?.tr("settings.iconColor.desc")
+      model: Color.colorKeyModel
+      currentKey: root.editIconColor
+      onSelected: key => root.editIconColor = key
+    }
   }
 
   function saveSettings() {

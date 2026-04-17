@@ -144,6 +144,12 @@ Item {
     return { "error": t("errors.unsupportedBackend") };
   }
 
+  function backendBuildConfigFileContent() {
+    if (backendId === "sway") return SwayBackend.buildConfigFileContent(draftOutputs);
+    if (backendId === "hyprland") return HyprlandBackend.buildConfigFileContent(draftOutputs);
+    return { "error": t("errors.unsupportedBackend") };
+  }
+
   function snapToGridEnabled() {
     return cfg.snapToGrid ?? defaults.snapToGrid ?? true;
   }
@@ -298,6 +304,14 @@ Item {
 
     fetchProcess.command = command;
     fetchProcess.running = true;
+  }
+
+  function getConfigurationScript() {
+    var result = backendBuildConfigFileContent();
+    if (result.error) {
+      return { "error": result.error };
+    }
+    return { "content": result.content, "backend": backendId };
   }
 
   function applyLayout() {

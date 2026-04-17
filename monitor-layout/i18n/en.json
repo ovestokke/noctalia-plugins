@@ -8,9 +8,12 @@
   "actions": {
     "refresh": "Refresh",
     "reset": "Reset",
-    "apply": "Apply"
+    "apply": "Apply",
+    "copyConfig": "Copy to Clipboard"
   },
   "panel": {
+    "tabControl": "Control",
+    "tabConfiguration": "Configuration",
     "canvasTitle": "Arrangement",
     "dragHint": "Drag a display tile to change its position. The selected tile can also have its resolution changed from the inspector.",
     "inspectorTitle": "Inspector",
@@ -26,7 +29,9 @@
     "transform": "Transform",
     "backend": "Backend",
     "pendingChanges": "There are unapplied layout changes.",
-    "empty": "No displays were returned by the backend."
+    "empty": "No displays were returned by the backend.",
+    "configTitle": "Configuration Scripts",
+    "configDescription": "Copy the configuration command for your compositor below. Add it to your config file to make your display layout permanent."
   },
   "settings": {
     "backend": {
@@ -62,7 +67,8 @@
     "dirty": "Draft layout updated.",
     "reset": "Draft layout reset.",
     "applying": "Applying display layout...",
-    "applied": "Display layout applied."
+    "applied": "Display layout applied.",
+    "configCopied": "Configuration script copied to clipboard!"
   },
   "errors": {
     "fetchFailed": "Failed to read output state from the compositor.",
