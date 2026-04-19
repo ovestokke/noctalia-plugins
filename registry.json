@@ -699,7 +699,7 @@
     {
       "id": "mimeapp-gui",
       "name": "MimeApp GUI",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "official": false,
       "author": "Mathew-D",
       "description": "GUI for inspecting MIME handlers and updating default applications in mimeapps.list (requires python3).",
@@ -712,7 +712,7 @@
         "Utility",
         "System"
       ],
-      "lastUpdated": "2026-04-16T23:12:28+07:00"
+      "lastUpdated": "2026-04-19T01:24:08+07:00"
     },
     {
       "id": "mini-docker",
