@@ -30,9 +30,7 @@ Item {
 
   anchors.fill: parent
 
-  function t(key, interpolations) {
-    return pluginApi ? pluginApi.tr(key, interpolations) : key;
-  }
+
 
   function computeSceneBounds(list) {
     if (!list || list.length === 0) {
@@ -116,7 +114,7 @@ Item {
       return "";
     }
 
-    var scaleText = output.scale && output.scale !== 1 ? "  |  " + t("panel.scale") + ": " + output.scale : "";
+    var scaleText = output.scale && output.scale !== 1 ? "  |  " + pluginApi?.tr("panel.scale") + ": " + output.scale : "";
     return output.resolutionLabel + scaleText;
   }
 
@@ -193,7 +191,7 @@ Item {
 
   function copyToClipboard(text) {
     var escaped = escapeForShell(text);
-    var cmd = "printf '%s' '" + escaped + "' | wl-copy || printf '%s' '" + escaped + "' | xclip -selection clipboard || printf '%s' '" + escaped + "' | xsel --clipboard --input";
+    var cmd = `printf '%s' '${escaped}' | wl-copy || printf '%s' '${escaped}' | xclip -selection clipboard || printf '%s' '${escaped}' | xsel --clipboard --input`;
     Quickshell.execDetached(["sh", "-c", cmd]);
   }
 
@@ -212,12 +210,12 @@ Item {
         spacing: Style.marginM
 
         NButton {
-          text: t("panel.tabControl")
+          text: pluginApi?.tr("panel.tabControl")
           onClicked: root.activeTab = 0
         }
 
         NButton {
-          text: t("panel.tabConfiguration")
+          text: pluginApi?.tr("panel.tabConfiguration")
           onClicked: root.activeTab = 1
         }
 
@@ -246,14 +244,14 @@ Item {
               spacing: Style.marginM
 
               NText {
-                text: t("panel.canvasTitle")
+                text: pluginApi?.tr("panel.canvasTitle")
                 pointSize: Style.fontSizeL
                 font.weight: Style.fontWeightBold
                 color: Color.mOnSurface
               }
 
               NText {
-                text: t("panel.dragHint")
+                text: pluginApi?.tr("panel.dragHint")
                 pointSize: Style.fontSizeS
                 color: Color.mOnSurfaceVariant
                 wrapMode: Text.WordWrap
@@ -341,7 +339,7 @@ Item {
                 NText {
                   anchors.centerIn: parent
                   visible: outputs.length === 0
-                  text: t("panel.empty")
+                  text: pluginApi?.tr("panel.empty")
                   pointSize: Style.fontSizeM
                   color: Color.mOnSurfaceVariant
                 }
@@ -510,7 +508,7 @@ Item {
               spacing: Style.marginM
 
               NText {
-                text: t("panel.inspectorTitle")
+                text: pluginApi?.tr("panel.inspectorTitle")
                 pointSize: Style.fontSizeL
                 font.weight: Style.fontWeightBold
                 color: Color.mOnSurface
@@ -518,7 +516,7 @@ Item {
 
               NText {
                 visible: !selectedOutput
-                text: t("panel.selectionHint")
+                text: pluginApi?.tr("panel.selectionHint")
                 pointSize: Style.fontSizeS
                 color: Color.mOnSurfaceVariant
                 wrapMode: Text.WordWrap
@@ -554,7 +552,7 @@ Item {
                   }
 
                   NText {
-                    text: t("panel.resolution")
+                    text: pluginApi?.tr("panel.resolution")
                     pointSize: Style.fontSizeS
                     color: Color.mOnSurfaceVariant
                   }
@@ -586,7 +584,7 @@ Item {
                   }
 
                   NText {
-                    text: t("panel.position")
+                    text: pluginApi?.tr("panel.position")
                     pointSize: Style.fontSizeS
                     color: Color.mOnSurfaceVariant
                   }
@@ -597,7 +595,7 @@ Item {
 
                     NTextInput {
                       Layout.fillWidth: true
-                      label: t("panel.positionX")
+                      label: pluginApi?.tr("panel.positionX")
                       text: root.editPosX
                       onTextChanged: root.editPosX = text
                       onEditingFinished: root.applyTypedPosition()
@@ -605,7 +603,7 @@ Item {
 
                     NTextInput {
                       Layout.fillWidth: true
-                      label: t("panel.positionY")
+                      label: pluginApi?.tr("panel.positionY")
                       text: root.editPosY
                       onTextChanged: root.editPosY = text
                       onEditingFinished: root.applyTypedPosition()
@@ -613,13 +611,13 @@ Item {
                   }
 
                   NButton {
-                    text: t("panel.setPosition")
+                    text: pluginApi?.tr("panel.setPosition")
                     enabled: !!selectedOutput && !!mainInstance
                     onClicked: root.applyTypedPosition()
                   }
 
                   NText {
-                    text: t("panel.scale")
+                    text: pluginApi?.tr("panel.scale")
                     pointSize: Style.fontSizeS
                     color: Color.mOnSurfaceVariant
                   }
@@ -637,14 +635,14 @@ Item {
                     }
 
                     NButton {
-                      text: t("panel.setScale")
+                      text: pluginApi?.tr("panel.setScale")
                       enabled: !!selectedOutput && !!mainInstance
                       onClicked: root.applyTypedScale()
                     }
                   }
 
                   NText {
-                    text: t("panel.scaleDesc")
+                    text: pluginApi?.tr("panel.scaleDesc")
                     pointSize: Style.fontSizeS
                     color: Color.mOnSurfaceVariant
                     wrapMode: Text.WordWrap
@@ -652,13 +650,13 @@ Item {
                   }
 
                   NText {
-                    text: t("panel.transform") + ": " + (selectedOutput ? selectedOutput.transform : "")
+                    text: pluginApi?.tr("panel.transform") + ": " + (selectedOutput ? selectedOutput.transform : "")
                     pointSize: Style.fontSizeS
                     color: Color.mOnSurfaceVariant
                   }
 
                   NText {
-                    text: t("panel.backend") + ": " + (mainInstance ? mainInstance.backendId : "")
+                    text: pluginApi?.tr("panel.backend") + ": " + (mainInstance ? mainInstance.backendId : "")
                     pointSize: Style.fontSizeS
                     color: Color.mOnSurfaceVariant
                   }
@@ -686,7 +684,7 @@ Item {
 
               NText {
                 visible: mainInstance && mainInstance.hasPendingChanges
-                text: t("panel.pendingChanges")
+                text: pluginApi?.tr("panel.pendingChanges")
                 pointSize: Style.fontSizeS
                 color: Color.mPrimary
                 wrapMode: Text.WordWrap
@@ -695,21 +693,21 @@ Item {
 
               NButton {
                 Layout.fillWidth: true
-                text: t("actions.refresh")
+                text: pluginApi?.tr("actions.refresh")
                 enabled: mainInstance && !mainInstance.isRefreshing && !mainInstance.isApplying
                 onClicked: mainInstance.refreshOutputs()
               }
 
               NButton {
                 Layout.fillWidth: true
-                text: t("actions.reset")
+                text: pluginApi?.tr("actions.reset")
                 enabled: mainInstance && mainInstance.hasPendingChanges && !mainInstance.isApplying
                 onClicked: mainInstance.resetDraftOutputs()
               }
 
               NButton {
                 Layout.fillWidth: true
-                text: t("actions.apply")
+                text: pluginApi?.tr("actions.apply")
                 enabled: mainInstance && mainInstance.hasPendingChanges && !mainInstance.isApplying
                 onClicked: mainInstance.applyLayout()
               }
@@ -733,14 +731,14 @@ Item {
             spacing: Style.marginM
 
             NText {
-              text: t("panel.configTitle")
+              text: pluginApi?.tr("panel.configTitle")
               pointSize: Style.fontSizeL
               font.weight: Style.fontWeightBold
               color: Color.mOnSurface
             }
 
             NText {
-              text: t("panel.configDescription")
+              text: pluginApi?.tr("panel.configDescription")
               pointSize: Style.fontSizeS
               color: Color.mOnSurfaceVariant
               wrapMode: Text.WordWrap
@@ -801,7 +799,7 @@ Item {
 
               NButton {
                 Layout.fillWidth: true
-                text: t("actions.copyConfig")
+                text: pluginApi?.tr("actions.copyConfig")
                 enabled: mainInstance && !mainInstance.getConfigurationScript().error
                 onClicked: {
                   var cfg = mainInstance.getConfigurationScript();
@@ -811,13 +809,13 @@ Item {
                     var fullText = header + cfg.content;
 
                     copyToClipboard(fullText);
-                    mainInstance.statusText = t("status.configCopied");
+                    mainInstance.statusText = pluginApi?.tr("status.configCopied");
                   }
                 }
               }
 
               NButton {
-                text: t("actions.refresh")
+                text: pluginApi?.tr("actions.refresh")
                 enabled: mainInstance && !mainInstance.isRefreshing && !mainInstance.isApplying
                 onClicked: mainInstance.refreshOutputs()
               }

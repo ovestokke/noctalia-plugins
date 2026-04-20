@@ -69,7 +69,7 @@ Item {
     onExited: function (exitCode) {
       root.isRefreshing = false;
       if (exitCode !== 0) {
-        root.errorText = root.refreshStderr !== "" ? root.refreshStderr : root.t("errors.fetchFailed");
+        root.errorText = root.refreshStderr !== "" ? root.refreshStderr : pluginApi?.tr("errors.fetchFailed");
         root.statusText = "";
         Logger.e("MonitorLayout", root.errorText);
       }
@@ -90,20 +90,18 @@ Item {
     onExited: function (exitCode) {
       root.isApplying = false;
       if (exitCode === 0) {
-        root.statusText = root.t("status.applied");
+        root.statusText = pluginApi?.tr("status.applied");
         root.errorText = "";
         root.refreshOutputs();
       } else {
-        root.errorText = root.applyStderr !== "" ? root.applyStderr : root.t("errors.applyFailed");
+        root.errorText = root.applyStderr !== "" ? root.applyStderr : pluginApi?.tr("errors.applyFailed");
         root.statusText = "";
         Logger.e("MonitorLayout", root.errorText);
       }
     }
   }
 
-  function t(key, interpolations) {
-    return pluginApi ? pluginApi.tr(key, interpolations) : key;
-  }
+
 
   function resolveBackendId() {
     var preferred = cfg.backend ?? defaults.backend ?? "auto";
@@ -129,6 +127,20 @@ Item {
   //     Parse the raw stdout text from the fetch command into a normalised array
   //     of output objects. Return { error: string } on failure.
   //
+  //   outputs: Array of monitor/output objects, each with at least:
+  //     {
+  //       outputId: string,   // unique identifier for the output/monitor
+  //       name: string,       // human-readable name
+  //       x: number,          // X position
+  //       y: number,          // Y position
+  //       width: number,      // width in pixels
+  //       height: number,     // height in pixels
+  //       scale: number,      // scale factor
+  //       modeId: string,     // current mode identifier
+  //       availableModes: Array<{ id, width, height, refresh, label }>,
+  //       ... (other backend-specific fields)
+  //     }
+  //
   //   buildApplyCommand(outputs, cfg, defaults) -> { script } | { error }
   //     Build a shell script string that applies the given draft outputs.
   //     Return { error: string } if the command cannot be built.
@@ -152,24 +164,23 @@ Item {
   function backendParseOutputs(rawText) {
     if (backendId === "sway") return SwayBackend.parseOutputs(rawText);
     if (backendId === "hyprland") return HyprlandBackend.parseOutputs(rawText);
-    return { "error": t("errors.unsupportedBackend") };
+    return { "error": pluginApi?.tr("errors.unsupportedBackend") };
   }
 
   function backendBuildApplyCommand() {
     if (backendId === "sway") return SwayBackend.buildApplyCommand(draftOutputs, cfg, defaults);
     if (backendId === "hyprland") return HyprlandBackend.buildApplyCommand(draftOutputs, cfg, defaults);
-    return { "error": t("errors.unsupportedBackend") };
+    return { "error": pluginApi?.tr("errors.unsupportedBackend") };
   }
 
   function backendBuildConfigFileContent() {
     if (backendId === "sway") return SwayBackend.buildConfigFileContent(draftOutputs);
     if (backendId === "hyprland") return HyprlandBackend.buildConfigFileContent(draftOutputs);
-    return { "error": t("errors.unsupportedBackend") };
+    return { "error": pluginApi?.tr("errors.unsupportedBackend") };
   }
 
-  function snapToGridEnabled() {
-    return cfg.snapToGrid ?? defaults.snapToGrid ?? true;
-  }
+
+  readonly property bool snapToGridEnabled: cfg.snapToGrid ?? defaults.snapToGrid ?? true
 
   function gridSize() {
     var parsed = parseInt(cfg.gridSize ?? defaults.gridSize ?? 40);
@@ -192,7 +203,7 @@ Item {
     liveOutputs = cloneValue(result.outputs);
     draftOutputs = cloneValue(result.outputs);
     errorText = "";
-    statusText = t("status.ready", {
+    statusText = pluginApi?.tr("status.ready", {
       "count": draftOutputs.length
     });
 
@@ -221,7 +232,8 @@ Item {
 
   function roundCoordinate(value, snap) {
     var rounded = Math.round(value);
-    if (!snap || !snapToGridEnabled()) {
+
+    if (!snap || !snapToGridEnabled) {
       return rounded;
     }
 
@@ -240,7 +252,7 @@ Item {
     nextOutputs[index].y = roundCoordinate(y, snap);
     draftOutputs = nextOutputs;
     selectedOutputId = outputId;
-    statusText = t("status.dirty");
+    statusText = pluginApi?.tr("status.dirty");
   }
 
   function setOutputResolution(outputId, modeId) {
@@ -266,7 +278,7 @@ Item {
       output.resolutionLabel = mode.label;
       draftOutputs = nextOutputs;
       selectedOutputId = outputId;
-      statusText = t("status.dirty");
+      statusText = pluginApi?.tr("status.dirty");
       return;
     }
   }
@@ -294,7 +306,7 @@ Item {
 
   function resetDraftOutputs() {
     draftOutputs = cloneValue(liveOutputs);
-    statusText = t("status.reset");
+    statusText = pluginApi?.tr("status.reset");
     errorText = "";
     if (!selectedOutputId || findOutputIndex(selectedOutputId) === -1) {
       selectedOutputId = draftOutputs.length > 0 ? draftOutputs[0].outputId : "";
@@ -308,13 +320,13 @@ Item {
 
     refreshStderr = "";
     errorText = "";
-    statusText = t("status.refreshing");
+    statusText = pluginApi?.tr("status.refreshing");
     isRefreshing = true;
 
     var command = backendBuildFetchCommand();
     if (!command) {
       isRefreshing = false;
-      errorText = t("errors.unsupportedBackend");
+      errorText = pluginApi?.tr("errors.unsupportedBackend");
       statusText = "";
       return;
     }
@@ -345,7 +357,7 @@ Item {
 
     applyStderr = "";
     errorText = "";
-    statusText = t("status.applying");
+    statusText = pluginApi?.tr("status.applying");
     isApplying = true;
     applyProcess.command = ["sh", "-lc", result.script];
     applyProcess.running = true;
