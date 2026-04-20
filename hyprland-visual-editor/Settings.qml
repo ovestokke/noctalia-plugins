@@ -8,15 +8,19 @@ ColumnLayout {
   id: root
   property var pluginApi: null
 
-  // 1. Local state ('edit' convention and official fallbacks)
-  property string editOverlayPath: pluginApi?.pluginSettings?.overlayPath || pluginApi?.manifest?.metadata?.defaultSettings?.overlayPath || "~/.cache/noctalia/HVE/overlay.conf"
-  property bool editAutoApply: pluginApi?.pluginSettings?.autoApply ?? pluginApi?.manifest?.metadata?.defaultSettings?.autoApply ?? true
-  property string editIcon: pluginApi?.pluginSettings?.icon || pluginApi?.manifest?.metadata?.defaultSettings?.icon || "adjustments-horizontal"
-  property string editIconColor: pluginApi?.pluginSettings?.iconColor || pluginApi?.manifest?.metadata?.defaultSettings?.iconColor || "primary"
+  // Settings and default values (Official Noctalia pattern)
+  readonly property var cfg: pluginApi?.pluginSettings || ({})
+  readonly property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
+
+  // 1. Local state ('edit' convention to avoid unnecessary disk writes)
+  property string editOverlayPath: cfg.overlayPath ?? defaults.overlayPath ?? "~/.cache/noctalia/HVE/overlay.conf"
+  property bool editAutoApply: cfg.autoApply ?? defaults.autoApply ?? true
+  property string editIcon: cfg.icon ?? defaults.icon ?? "adjustments-horizontal"
+  property string editIconColor: cfg.iconColor ?? defaults.iconColor ?? "primary"
 
   spacing: Style.marginM
 
-  // ── Preview ────────────────────────────────────────────────────────────────
+  // ── Preview ──────────────────────────────────────────────────────────
   RowLayout {
     spacing: Style.marginM
     Layout.alignment: Qt.AlignHCenter
@@ -38,7 +42,7 @@ ColumnLayout {
     }
   }
 
-  // ── Icon Configuration ───────────────────────────────────────────────────
+  // ── Icon Configuration ────────────────────────────────────────────────
   NButton {
     Layout.fillWidth: true
     text: pluginApi?.tr("settings.change_icon_button")
@@ -58,12 +62,12 @@ ColumnLayout {
     label: pluginApi?.tr("settings.icon_color_label")
     currentKey: root.editIconColor
     onSelected: key => { root.editIconColor = key }
-    defaultValue: pluginApi?.manifest?.metadata?.defaultSettings?.iconColor || "primary"
+    defaultValue: defaults.iconColor || "primary"
   }
 
   NDivider { Layout.fillWidth: true }
 
-  // ── Files and Application Configuration (Recovered Section) ────────────────
+  // ── Files and Application Configuration ────────────────────────────────
   NTextInput {
     Layout.fillWidth: true
     label: pluginApi?.tr("settings.path_label")
@@ -81,7 +85,7 @@ ColumnLayout {
     onToggled: checked => { root.editAutoApply = checked }
   }
 
-  // ── Save Function ────────────────────────────────────────────────────────
+  // ── Save Function (Required by the Shell) ──────────────────────────
   function saveSettings() {
     if (!pluginApi) return
     

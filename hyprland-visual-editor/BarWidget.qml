@@ -7,6 +7,7 @@ import qs.Widgets
 NIconButton {
   id: root
 
+  // ── Injected Properties ──────────────────────────────────────────────
   property var pluginApi: null
   property ShellScreen screen
   property string widgetId: ""
@@ -14,13 +15,17 @@ NIconButton {
   property int sectionWidgetIndex: -1
   property int sectionWidgetsCount: 0
 
+  // ── Configuration Logic (Fallback Pattern) ──────────────────────────
   property var cfg: pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
 
   readonly property string iconKey: cfg.icon ?? defaults.icon ?? "adjustments-horizontal"
   readonly property string iconColorKey: cfg.iconColor ?? defaults.iconColor ?? "primary"
   
+  // ── Visual Configuration ─────────────────────────────────────────────────
   icon: iconKey
+  
+  // NIconButton already manages tooltips automatically with these two properties:
   tooltipText: pluginApi?.tr("widget.tooltip")
   tooltipDirection: BarService.getTooltipDirection(screen?.name)
   
@@ -29,6 +34,7 @@ NIconButton {
 
   colorBg: Style.capsuleColor
   
+  // Color resolution with transparency protection (Alpha check)
   colorFg: {
     let resolved = Color.resolveColorKeyOptional(iconColorKey);
     if (root.containsMouse) return Color.mOnHover;
@@ -38,6 +44,7 @@ NIconButton {
   border.color: Style.capsuleBorderColor
   border.width: Style.borderS
 
+  // Color transition smoothing
   Behavior on colorFg {
     ColorAnimation { 
       duration: Style.animationFast
@@ -45,20 +52,14 @@ NIconButton {
     }
   }
 
+  // ── Interacciones ────────────────────────────────────────────────────────
   onClicked: {
     if (pluginApi) {
       pluginApi.openPanel(root.screen, this);
     }
   }
 
-  onEntered: {
-    TooltipService.show(root, pluginApi?.tr("widget.tooltip"), BarService.getTooltipDirection(screen?.name))
-  }
-  
-  onExited: {
-    TooltipService.hide()
-  }
-
+  // Context menu (Right click)
   NPopupContextMenu {
     id: contextMenu
 
