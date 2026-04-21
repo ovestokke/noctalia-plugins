@@ -386,20 +386,45 @@ Item {
     return Qt.btoa(new Uint8Array(bytes));
   }
 
+  // Atomic write: decode base64 to a temp file, verify non-empty, then rename
+  // onto the target. Optionally rm a stale filename (from a rename) only after
+  // the new file is verified on disk. All paths are passed through argv — not
+  // interpolated into the shell string — so filenames with spaces or shell
+  // metacharacters cannot break the command. Replaces the prior
+  // `echo | base64 -d > file` pattern which truncated the target before any
+  // data flowed and left 0-byte files whenever the shell was killed between
+  // the open-for-truncate syscall and the write (shutdown, panel teardown,
+  // interrupted process, empty base64, etc.). On any failure, the original
+  // file is preserved untouched.
+  function atomicWriteBase64(filePath, base64, oldFilePath) {
+    if (!filePath || typeof filePath !== "string") {
+      Logger.w("Clipper", "atomicWriteBase64: missing filePath");
+      return;
+    }
+    if (!base64 || base64.length === 0) {
+      Logger.w("Clipper", "atomicWriteBase64: refusing empty write to " + filePath);
+      return;
+    }
+    const script = 'p="$1"; t="${1}.tmp"; o="$2"; ' +
+                   'echo "$3" | base64 -d > "$t" && ' +
+                   '[ -s "$t" ] && ' +
+                   'mv -f "$t" "$p" && ' +
+                   '{ [ -z "$o" ] || [ "$o" = "$p" ] || rm -f "$o"; } ' +
+                   '|| { rm -f "$t"; exit 1; }';
+    Quickshell.execDetached(["sh", "-c", script, "atomicWrite",
+                             filePath, oldFilePath || "", base64]);
+  }
+
   // Function to save pinned items to file
   function savePinnedFile() {
     const data = {
       items: root.pinnedItems
     };
     const json = JSON.stringify(data, null, 2);
-
-    // Use base64 encoding to safely pass JSON through shell
-    // stringToBase64() produces valid base64 (A-Z, a-z, 0-9, +, /, =) - no shell metacharacters
-    // File path is constant, not user-controlled
     const base64 = stringToBase64(json);
     const filePath = Quickshell.env("HOME") + "/.config/noctalia/plugins/clipper/pinned.json";
 
-    Quickshell.execDetached(["sh", "-c", `echo "${base64}" | base64 -d > "${filePath}"`]);
+    atomicWriteBase64(filePath, base64);
   }
 
   // Function to unpin item
@@ -481,10 +506,14 @@ Item {
 
     const newFilename = getNoteFilename(updatedNote);
 
-    // If filename changed (title changed), delete old file
+    // Track the stale filename so saveNoteCard / atomicWriteBase64 can delete
+    // it atomically only AFTER the new file is successfully on disk. The
+    // previous code fired rm and save in parallel via execDetached, which
+    // could reorder so that rm landed after a failed save — wiping both
+    // files at once. Never again.
+    let oldFilePathToReplace = "";
     if (oldFilename !== newFilename && updates.title !== undefined) {
-      const oldFilePath = root.noteCardsDir + "/" + oldFilename;
-      Quickshell.execDetached(["rm", oldFilePath]);
+      oldFilePathToReplace = root.noteCardsDir + "/" + oldFilename;
     }
 
     // Immutable array update
@@ -497,8 +526,8 @@ Item {
     root.noteCards = newNotes;
     root.noteCardsRevision++;
 
-    // Save to file
-    saveNoteCard(updatedNote);
+    // Save to file (old filename is removed only on successful new save)
+    saveNoteCard(updatedNote, oldFilePathToReplace);
   }
 
   // Function to delete a note card
@@ -566,9 +595,9 @@ Item {
     const fileName = "notecard_" + timestamp + ".txt";
     const filePath = Quickshell.env("HOME") + "/Documents/" + fileName;
 
-    // Use base64 encoding to safely pass content through shell
+    // Atomic write so a partial/killed export cannot leave a 0-byte .txt
     const base64 = stringToBase64(note.content || "");
-    Quickshell.execDetached(["sh", "-c", `echo "${base64}" | base64 -d > "${filePath}"`]);
+    atomicWriteBase64(filePath, base64);
 
     // Store exported filename - append to list so all exports are tracked
     const existingExports = note.exportedFiles || [];
@@ -604,15 +633,24 @@ Item {
     return title + ".json";
   }
 
-  // Function to save individual notecard to file
-  function saveNoteCard(note) {
+  // Function to save individual notecard to file.
+  // oldFilePath (optional) is the previous on-disk filename when the note
+  // has been renamed — atomicWriteBase64 removes it only after the new file
+  // is verified non-empty, so a failed save never wipes the old data.
+  function saveNoteCard(note, oldFilePath) {
+    if (!note || !note.id) {
+      Logger.w("Clipper", "saveNoteCard: refusing to save invalid note");
+      return;
+    }
     const filename = getNoteFilename(note);
     const filePath = root.noteCardsDir + "/" + filename;
     const json = JSON.stringify(note, null, 2);
-
-    // Use base64 encoding to safely pass JSON through shell
+    if (!json || json.length < 10) {
+      Logger.w("Clipper", "saveNoteCard: refusing suspiciously small JSON for note " + note.id);
+      return;
+    }
     const base64 = stringToBase64(json);
-    Quickshell.execDetached(["sh", "-c", `echo "${base64}" | base64 -d > "${filePath}"`]);
+    atomicWriteBase64(filePath, base64, oldFilePath);
   }
 
   // Function to save all note cards (saves each to individual file)
@@ -1270,6 +1308,14 @@ Item {
     // Create notecards directory if it doesn't exist
     Quickshell.execDetached(["mkdir", "-p", root.noteCardsDir]);
 
+    // Sweep any stale .tmp files left over from a prior interrupted atomic
+    // write (shell killed between tmp-write and rename). These are never
+    // meaningful data; leaving them around would confuse the `jq -s '*.json'`
+    // loader on next start.
+    Quickshell.execDetached(["sh", "-c",
+                             'find "$1" -maxdepth 1 -name "*.json.tmp" -type f -delete 2>/dev/null',
+                             "cleanTmp", root.noteCardsDir]);
+
     // Force reload pinned items from file
     pinnedFile.reload();
 
@@ -1297,8 +1343,6 @@ Item {
       getSelectionForNoteSelectorProcess.terminate();
     if (copyToClipboardProc.running)
       copyToClipboardProc.terminate();
-    if (wlCopyProc.running)
-      wlCopyProc.terminate();
     if (deleteItemProc.running)
       deleteItemProc.terminate();
     if (wipeProc.running)
