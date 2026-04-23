@@ -11,7 +11,7 @@
     "Bar",
     "Panel",
     "Development",
-    "Unofficial"
+    "Experimental"
   ],
   "entryPoints": {
     "main": "Main.qml",
