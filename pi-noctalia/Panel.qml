@@ -123,9 +123,9 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: contentColumn.implicitHeight + Style.marginM * 2
                 radius: Style.radiusM
-                color: Qt.alpha(Color.mOnSurface, 0.04)
+                color: rowMouse.containsMouse ? Qt.alpha(Color.mOnSurface, 0.07) : Qt.alpha(Color.mOnSurface, 0.04)
                 border.width: 1
-                border.color: Qt.alpha(Color.mOnSurface, 0.08)
+                border.color: rowMouse.containsMouse ? Qt.alpha(mainInstance?.accentColorValue() ?? Color.mPrimary, 0.28) : Qt.alpha(Color.mOnSurface, 0.08)
 
                 property var rowData: modelData
 
@@ -204,6 +204,14 @@ Item {
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                   }
+                }
+
+                MouseArea {
+                  id: rowMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: mainInstance?.launchSession(rowData)
                 }
               }
             }

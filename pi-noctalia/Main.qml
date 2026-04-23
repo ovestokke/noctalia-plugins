@@ -98,7 +98,41 @@ Item {
     }
   }
 
-  function updateSession(id, project, status, detail, prompt, ctxPct) {
+  function shellQuote(value) {
+    var s = String(value === undefined || value === null ? "" : value)
+    return "'" + s.replace(/'/g, "'\\''") + "'"
+  }
+
+  function terminalCommandParts() {
+    var raw = Settings?.data?.appLauncher?.terminalCommand || ""
+    var parts = String(raw).trim().split(/\s+/).filter(function(part) { return part.length > 0 })
+    if (parts.length === 0) return ["ghostty", "-e"]
+    return parts
+  }
+
+  function resumeCommandForRow(row) {
+    if (!row) return ""
+
+    var target = row.sessionFile || row.sessionId || ""
+    var base = row.cwd ? ("cd " + shellQuote(row.cwd) + " && ") : ""
+
+    if (target) {
+      return base + "pi --session " + shellQuote(target)
+    }
+    return base + "pi -c"
+  }
+
+  function launchSession(row) {
+    if (!row) return
+
+    var command = resumeCommandForRow(row)
+    if (!command) return
+
+    var args = terminalCommandParts().concat(["sh", "-lc", command])
+    Quickshell.execDetached(args)
+  }
+
+  function updateSession(id, project, status, detail, prompt, ctxPct, cwd, sessionId, sessionFile) {
     if (!id || !project) return
 
     var normalized = _statusOrFallback(status)
@@ -119,6 +153,9 @@ Item {
         if (prompt !== undefined && prompt !== null && prompt !== "") revived.prompt = prompt
         revived.frozenElapsed = null
         revived.ctxPct = contextPct
+        revived.cwd = cwd || revived.cwd || ""
+        revived.sessionId = sessionId || revived.sessionId || ""
+        revived.sessionFile = sessionFile || revived.sessionFile || ""
 
         rows.push(revived)
       } else {
@@ -130,7 +167,10 @@ Item {
                     prompt: prompt || "",
                     startedAt: Date.now(),
                     frozenElapsed: null,
-                    ctxPct: contextPct
+                    ctxPct: contextPct,
+                    cwd: cwd || "",
+                    sessionId: sessionId || "",
+                    sessionFile: sessionFile || ""
                   })
       }
     } else {
@@ -143,6 +183,9 @@ Item {
       }
       current.ctxPct = contextPct
       current.frozenElapsed = null
+      current.cwd = cwd || current.cwd || ""
+      current.sessionId = sessionId || current.sessionId || ""
+      current.sessionFile = sessionFile || current.sessionFile || ""
     }
 
     activeSessions = rows
@@ -305,7 +348,10 @@ Item {
         prompt: d("prompt-build-panel"),
         startedAt: base - 56000,
         frozenElapsed: null,
-        ctxPct: 41
+        ctxPct: 41,
+        cwd: "/home/ove/code/pi-noctalia",
+        sessionId: "demo-session-1",
+        sessionFile: "/home/ove/.pi/agent/sessions/demo-session-1.jsonl"
       },
       {
         id: "pi-2",
@@ -315,7 +361,10 @@ Item {
         prompt: d("prompt-confirm-model"),
         startedAt: base - 24000,
         frozenElapsed: null,
-        ctxPct: 18
+        ctxPct: 18,
+        cwd: "/home/ove/code/docs",
+        sessionId: "demo-session-2",
+        sessionFile: "/home/ove/.pi/agent/sessions/demo-session-2.jsonl"
       }
     ]
 
@@ -328,7 +377,10 @@ Item {
         prompt: d("prompt-default-settings"),
         startedAt: base - 180000,
         frozenElapsed: 37000,
-        ctxPct: 9
+        ctxPct: 9,
+        cwd: "/home/ove/code/pi-noctalia",
+        sessionId: "demo-session-3",
+        sessionFile: "/home/ove/.pi/agent/sessions/demo-session-3.jsonl"
       },
       {
         id: "pi-4",
@@ -338,7 +390,10 @@ Item {
         prompt: d("prompt-parse-status"),
         startedAt: base - 140000,
         frozenElapsed: 16000,
-        ctxPct: 75
+        ctxPct: 75,
+        cwd: "/home/ove/code/pi-noctalia",
+        sessionId: "demo-session-4",
+        sessionFile: "/home/ove/.pi/agent/sessions/demo-session-4.jsonl"
       }
     ]
 
@@ -360,8 +415,8 @@ Item {
   IpcHandler {
     target: "plugin:pi-noctalia"
 
-    function update(id: string, project: string, status: string, detail: string, prompt: string, ctxPct: string) {
-      root.updateSession(id, project, status, detail, prompt, ctxPct)
+    function update(id: string, project: string, status: string, detail: string, prompt: string, ctxPct: string, cwd: string, sessionId: string, sessionFile: string) {
+      root.updateSession(id, project, status, detail, prompt, ctxPct, cwd, sessionId, sessionFile)
     }
 
     function done(id: string) {
