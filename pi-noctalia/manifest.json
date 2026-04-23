@@ -3,7 +3,7 @@
   "name": "Pi Noctalia",
   "version": "0.1.0",
   "minNoctaliaVersion": "4.0.0",
-  "author": "pi-noctalia contributors",
+  "author": "OveStokke",
   "license": "MIT",
   "repository": "https://github.com/ovestokke/noctalia-plugins",
   "description": "Dynamic-Island-style coding-agent activity capsule for Noctalia Shell.",
