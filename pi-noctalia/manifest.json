@@ -1,7 +1,7 @@
 {
   "id": "pi-noctalia",
   "name": "Pi Noctalia",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minNoctaliaVersion": "4.0.0",
   "author": "OveStokke",
   "license": "MIT",

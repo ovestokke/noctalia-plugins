@@ -4,7 +4,7 @@
     {
       "id": "pi-noctalia",
       "name": "Pi Noctalia",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "official": false,
       "author": "OveStokke",
       "description": "Dynamic-Island-style coding-agent activity capsule for Noctalia Shell.",
