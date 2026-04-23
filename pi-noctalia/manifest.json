@@ -1,0 +1,36 @@
+{
+  "id": "pi-noctalia",
+  "name": "Pi Noctalia",
+  "version": "0.1.0",
+  "minNoctaliaVersion": "4.0.0",
+  "author": "pi-noctalia contributors",
+  "license": "MIT",
+  "repository": "https://github.com/ovestokke/noctalia-plugins",
+  "description": "Dynamic-Island-style coding-agent activity capsule for Noctalia Shell.",
+  "tags": [
+    "Bar",
+    "Panel",
+    "Development"
+  ],
+  "entryPoints": {
+    "main": "Main.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml",
+    "settings": "Settings.qml"
+  },
+  "dependencies": {
+    "plugins": []
+  },
+  "metadata": {
+    "defaultSettings": {
+      "size": "medium",
+      "showPrompt": true,
+      "showElapsed": true,
+      "showContext": true,
+      "autoHideCompleted": true,
+      "completedRetentionSeconds": 120,
+      "maxRows": 30,
+      "accentColor": "primary"
+    }
+  }
+}

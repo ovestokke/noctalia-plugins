@@ -1,0 +1,59 @@
+{
+  "status": {
+    "thinking": "Thinking",
+    "reading": "Reading",
+    "editing": "Editing",
+    "writing": "Writing",
+    "running": "Running",
+    "searching": "Searching",
+    "done": "Done",
+    "error": "Error"
+  },
+  "context": {
+    "open-settings": "Widget Settings",
+    "clear-completed": "Clear Completed",
+    "clear-all": "Clear All"
+  },
+  "panel": {
+    "title": "Pi Noctalia",
+    "summary": "%1 active • %2 completed",
+    "clear-completed": "Clear Completed",
+    "clear-all": "Clear All",
+    "empty": "No active agent sessions",
+    "prompt": "Prompt: %1"
+  },
+  "settings": {
+    "title": "Pi Noctalia Settings",
+    "description": "Configure the session capsule and panel behavior.",
+    "size": "Widget Size",
+    "size-description": "Controls the capsule scaling in the bar and panel.",
+    "size-small": "Small",
+    "size-medium": "Medium",
+    "size-large": "Large",
+    "size-xlarge": "Extra Large",
+    "accent-color": "Accent Color",
+    "accent-color-description": "Use Noctalia theme accent tokens.",
+    "accent-primary": "Primary",
+    "accent-secondary": "Secondary",
+    "accent-tertiary": "Tertiary",
+    "show-prompt": "Show Prompt",
+    "show-prompt-description": "Display the row prompt text in the panel.",
+    "show-elapsed": "Show Elapsed Time",
+    "show-elapsed-description": "Display elapsed time in bar and panel rows.",
+    "show-context": "Show Context Percent",
+    "show-context-description": "Display context percentage when provided.",
+    "auto-hide-completed": "Auto-hide Completed",
+    "auto-hide-completed-description": "Automatically remove completed rows after retention time.",
+    "completed-retention": "Completed Retention",
+    "completed-retention-description": "Keep completed rows for %1 seconds.",
+    "max-rows": "Maximum Rows",
+    "max-rows-description": "Limit visible rows to %1 entries."
+  },
+  "demo": {
+    "prompt-build-panel": "build initial panel rows",
+    "prompt-confirm-model": "confirm session row model",
+    "prompt-default-settings": "add default settings",
+    "prompt-parse-status": "parse incoming status",
+    "detail-unknown-status": "unknown status from adapter"
+  }
+}
