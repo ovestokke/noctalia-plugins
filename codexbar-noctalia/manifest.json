@@ -1,0 +1,34 @@
+{
+  "id": "codexbar-noctalia",
+  "name": "CodexBar Noctalia",
+  "version": "1.0.0",
+  "minNoctaliaVersion": "4.6.6",
+  "author": "Ove Stokke",
+  "license": "MIT",
+  "repository": "https://github.com/ovestokke/noctalia-plugins",
+  "description": "Monitor AI coding assistant usage through the CodexBar CLI.",
+  "tags": [
+    "Bar",
+    "Utility"
+  ],
+  "entryPoints": {
+    "main": "Main.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml",
+    "settings": "Settings.qml"
+  },
+  "dependencies": {
+    "plugins": []
+  },
+  "metadata": {
+    "defaultSettings": {
+      "codexbarPath": "codexbar",
+      "source": "cli",
+      "provider": "all",
+      "refreshIntervalSec": 120,
+      "includeStatus": false,
+      "autoRefresh": true,
+      "installDir": "~/.local/bin"
+    }
+  }
+}

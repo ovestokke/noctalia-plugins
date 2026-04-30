@@ -17,6 +17,23 @@
         "Development",
         "Experimental"
       ]
+    },
+    {
+      "id": "codexbar-monitor",
+      "name": "CodexBar Monitor",
+      "version": "1.0.0",
+      "official": false,
+      "author": "OveStokke",
+      "description": "AI coding assistant usage monitor backed by the CodexBar CLI.",
+      "repository": "https://github.com/ovestokke/noctalia-plugins",
+      "minNoctaliaVersion": "4.6.6",
+      "license": "MIT",
+      "tags": [
+        "Bar",
+        "Panel",
+        "Development",
+        "Experimental"
+      ]
     }
   ]
 }

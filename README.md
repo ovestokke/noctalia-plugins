@@ -1,8 +1,9 @@
 # Ove's Noctalia Plugin Registry
 
-This is a small custom Noctalia plugin registry containing only one plugin:
+This is a small custom Noctalia plugin registry containing a few experimental plugins:
 
 - `pi-noctalia` — Dynamic-Island-style coding-agent activity capsule for Noctalia Shell
+- `codexbar-monitor` — AI coding assistant usage monitor backed by the CodexBar CLI
 
 ## Install as a custom registry
 
@@ -18,6 +19,7 @@ This registry is intended to stay minimal while `pi-noctalia` evolves outside th
 
 ```text
 pi-noctalia/
+codexbar-monitor/
 registry.json
 schema.json
 README.md
@@ -25,6 +27,6 @@ README.md
 
 ## Notes
 
-This fork is intentionally trimmed down to just `pi-noctalia` so it is easier to maintain while the plugin is still evolving.
+This fork is intentionally trimmed down to personal/experimental plugins so they are easier to maintain while evolving.
 
-If the plugin matures enough for upstreaming, it can later be proposed to the official Noctalia plugins repository.
+If a plugin matures enough for upstreaming, it can later be proposed to the official Noctalia plugins repository.
