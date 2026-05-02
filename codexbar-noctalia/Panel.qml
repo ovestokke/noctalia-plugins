@@ -16,6 +16,12 @@ Item {
 
   anchors.fill: parent
 
+  function trf(key, arg1) {
+    var value = pluginApi?.tr(key) || ""
+    if (arg1 !== undefined) value = value.replace("%1", arg1)
+    return value
+  }
+
   Rectangle {
     id: panelContainer
     anchors.fill: parent
@@ -36,12 +42,12 @@ Item {
         }
         NButton {
           text: pluginApi?.tr("panel.check")
-          enabled: !(mainInstance?.checking ?? false)
+          enabled: !(mainInstance?.checking ?? false) && !(mainInstance?.installing ?? false)
           onClicked: mainInstance?.checkCli()
         }
         NButton {
           text: pluginApi?.tr("panel.refresh")
-          enabled: mainInstance?.ready ?? false
+          enabled: (mainInstance?.ready ?? false) && !(mainInstance?.refreshing ?? false)
           onClicked: mainInstance?.refreshUsage()
         }
       }
@@ -85,15 +91,49 @@ Item {
         }
       }
 
+      RowLayout {
+        Layout.fillWidth: true
+        NText {
+          text: pluginApi?.tr("panel.providers")
+          pointSize: Style.fontSizeL
+          font.weight: Style.fontWeightBold
+          Layout.fillWidth: true
+        }
+        NText {
+          visible: (mainInstance?.lastUpdate || "") !== ""
+          text: pluginApi?.tr("panel.lastUpdate") + ": " + (mainInstance?.lastUpdate || "")
+          pointSize: Style.fontSizeXS
+          color: Color.mOnSurfaceVariant
+        }
+      }
+
       NText {
-        text: pluginApi?.tr("panel.providers")
-        pointSize: Style.fontSizeL
-        font.weight: Style.fontWeightBold
+        Layout.fillWidth: true
+        visible: mainInstance?.refreshing ?? false
+        text: pluginApi?.tr("panel.refreshing")
+        color: Color.mOnSurfaceVariant
+      }
+
+      NText {
+        Layout.fillWidth: true
+        visible: !(mainInstance?.refreshing ?? false) && (mainInstance?.ready ?? false) && (mainInstance?.providerCount ?? 0) === 0
+        text: pluginApi?.tr("panel.noProviders")
+        color: Color.mOnSurfaceVariant
+        wrapMode: Text.Wrap
+      }
+
+      NText {
+        Layout.fillWidth: true
+        visible: (mainInstance?.providerErrorCount ?? 0) > 0 && (mainInstance?.providerCount ?? 0) > 0
+        text: root.trf("panel.providerErrors", mainInstance?.providerErrorCount ?? 0)
+        color: Color.mSecondary
+        wrapMode: Text.Wrap
       }
 
       ListView {
         Layout.fillWidth: true
         Layout.fillHeight: true
+        visible: (mainInstance?.providerCount ?? 0) > 0
         clip: true
         model: mainInstance?.providers ?? []
         spacing: Style.marginS

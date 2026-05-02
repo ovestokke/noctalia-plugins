@@ -70,6 +70,26 @@ parse_args() {
   done
 }
 
+expand_path_value() {
+  local value="$1"
+  case "$value" in
+    "~") printf '%s\n' "$HOME" ;;
+    "~/"*) printf '%s/%s\n' "$HOME" "${value#\~/}" ;;
+    "\$HOME") printf '%s\n' "$HOME" ;;
+    "\$HOME/"*) printf '%s/%s\n' "$HOME" "${value#\$HOME/}" ;;
+    "\${HOME}") printf '%s\n' "$HOME" ;;
+    "\${HOME}/"*) printf '%s/%s\n' "$HOME" "${value#\$\{HOME\}/}" ;;
+    *) printf '%s\n' "$value" ;;
+  esac
+}
+
+normalize_paths() {
+  INSTALL_DIR="$(expand_path_value "$INSTALL_DIR")"
+  if [[ -n "$CODEXBAR_PATH" ]]; then
+    CODEXBAR_PATH="$(expand_path_value "$CODEXBAR_PATH")"
+  fi
+}
+
 arch_name() {
   case "$(uname -m)" in
     x86_64|amd64) printf 'x86_64' ;;
@@ -278,6 +298,7 @@ install_latest() {
 
 main() {
   parse_args "$@"
+  normalize_paths
   need python3
   if [[ "$COMMAND" == "install" || "$COMMAND" == "update" ]]; then
     need curl
@@ -330,6 +351,10 @@ main() {
         update_available=0
       else
         log "codexbar is already up to date ($current)"
+      fi
+      if [[ -n "$missing" && "$JSON" == 1 ]]; then
+        emit_status "$installed" "$path" "$current" "$latest" "$asset" "$update_available" "$missing"
+        exit 1
       fi
       fail_missing_libraries "$missing"
       emit_status "$installed" "$path" "$current" "$latest" "$asset" "$update_available" "$missing"

@@ -18,13 +18,12 @@ CodexBar web/auto sources are macOS-only. On Linux, configure the plugin to use:
 
 ```text
 source = cli
+provider = all
 ```
 
-or for API-backed providers:
+`provider = all` means: read `codexbar config dump --format json`, take only enabled providers, then query those providers one by one. This avoids CodexBar's Linux `--provider all` behavior where unsupported/disabled providers can hang or emit extra JSON.
 
-```text
-source = api
-```
+For one specific provider, set `provider = codex`, `claude`, `gemini`, etc. For API-backed providers, use `source = api`.
 
 The current upstream Linux binary requires `libxml2.so.2`. On current Arch/CachyOS this is provided by:
 

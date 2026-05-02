@@ -64,6 +64,7 @@ ColumnLayout {
     Layout.fillWidth: true
     label: pluginApi?.tr("settings.provider")
     description: pluginApi?.tr("settings.providerDescription")
+    placeholderText: "all"
     text: root.editProvider
     onTextChanged: root.editProvider = text
   }

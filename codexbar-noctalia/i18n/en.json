@@ -24,6 +24,10 @@
     "install": "Install CLI",
     "update": "Update CLI",
     "providers": "Providers",
+    "lastUpdate": "Updated",
+    "refreshing": "Loading provider usage…",
+    "noProviders": "No provider usage returned. Check the provider setting and CodexBar authentication.",
+    "providerErrors": "%1 provider(s) failed; showing the providers that returned usage.",
     "resets": "Resets"
   },
   "settings": {
@@ -36,7 +40,7 @@
     "source": "Source",
     "sourceDescription": "Linux-supported sources. Use cli for Codex/Claude CLIs or api for API-backed providers.",
     "provider": "Provider",
-    "providerDescription": "Provider id, such as all, codex, claude, gemini, copilot.",
+    "providerDescription": "Provider id, such as codex, claude, gemini, copilot, or all. All means enabled providers from CodexBar config.",
     "autoRefresh": "Auto refresh",
     "autoRefreshDescription": "Refresh usage on a timer.",
     "refreshInterval": "Refresh interval",
@@ -45,9 +49,16 @@
   },
   "errors": {
     "parseStatus": "Failed to parse CodexBar CLI status",
+    "parseConfig": "Failed to parse CodexBar config JSON",
     "parseUsage": "Failed to parse CodexBar usage JSON",
     "checkFailed": "CodexBar CLI check failed",
     "installFailed": "CodexBar CLI install/update failed",
-    "usageFailed": "CodexBar usage refresh failed"
+    "configFailed": "CodexBar config check failed",
+    "configEmpty": "CodexBar returned an empty config",
+    "usageFailed": "CodexBar usage refresh failed",
+    "usageTimeout": "CodexBar usage refresh timed out",
+    "usageEmpty": "CodexBar returned no provider usage",
+    "noConfiguredProviders": "No enabled providers in CodexBar config",
+    "providerFailures": "%1 provider(s) failed while refreshing usage"
   }
 }
