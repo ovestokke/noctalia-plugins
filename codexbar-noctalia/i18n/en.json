@@ -28,7 +28,8 @@
     "refreshing": "Loading provider usage…",
     "noProviders": "No provider usage returned. Check the provider setting and CodexBar authentication.",
     "providerErrors": "%1 provider(s) failed; showing the providers that returned usage.",
-    "resets": "Resets"
+    "resets": "Resets",
+    "credits": "Credits"
   },
   "settings": {
     "title": "CodexBar Noctalia settings",
