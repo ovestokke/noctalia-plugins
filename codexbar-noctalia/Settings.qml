@@ -8,6 +8,7 @@ ColumnLayout {
 
   property var pluginApi: null
   readonly property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
+  readonly property var mainInstance: pluginApi?.mainInstance
 
   property string editCodexbarPath: pluginApi?.pluginSettings?.codexbarPath || defaults.codexbarPath || "codexbar"
   property string editSource: pluginApi?.pluginSettings?.source || defaults.source || "cli"
@@ -16,6 +17,29 @@ ColumnLayout {
   property bool editIncludeStatus: pluginApi?.pluginSettings?.includeStatus ?? defaults.includeStatus ?? false
   property bool editAutoRefresh: pluginApi?.pluginSettings?.autoRefresh ?? defaults.autoRefresh ?? true
   property string editInstallDir: pluginApi?.pluginSettings?.installDir || defaults.installDir || "~/.local/bin"
+
+  // Provider toggles: list of { id, enabled }
+  property var editProviderToggles: []
+
+  Component.onCompleted: {
+    // Initialize provider toggles from mainInstance.allProviders
+    syncProviderToggles()
+  }
+
+  function syncProviderToggles() {
+    var src = mainInstance?.allProviders || []
+    if (src.length > 0) {
+      editProviderToggles = src.map(function(p) { return { id: p.id, enabled: p.enabled } })
+    }
+  }
+
+  function enabledProviderIds() {
+    var ids = []
+    for (var i = 0; i < editProviderToggles.length; i++) {
+      if (editProviderToggles[i].enabled) ids.push(editProviderToggles[i].id)
+    }
+    return ids
+  }
 
   spacing: Style.marginM
 
@@ -32,6 +56,67 @@ ColumnLayout {
     Layout.fillWidth: true
   }
 
+  // ── Provider toggles ──
+  NBox {
+    Layout.fillWidth: true
+    visible: editProviderToggles.length > 0
+
+    ColumnLayout {
+      anchors.fill: parent
+      anchors.margins: Style.marginM
+      spacing: Style.marginS
+
+      NText {
+        text: pluginApi?.tr("settings.providers")
+        font.weight: Style.fontWeightBold
+        pointSize: Style.fontSizeM
+      }
+
+      NText {
+        text: pluginApi?.tr("settings.providersDescription")
+        color: Color.mOnSurfaceVariant
+        wrapMode: Text.Wrap
+        Layout.fillWidth: true
+        pointSize: Style.fontSizeXS
+      }
+
+      Repeater {
+        model: editProviderToggles
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.marginS
+
+          NText {
+            text: modelData.id
+            pointSize: Style.fontSizeS
+            Layout.fillWidth: true
+            color: modelData.enabled ? Color.mOnSurface : Color.mOnSurfaceVariant
+          }
+
+          NToggle {
+            checked: modelData.enabled
+            onToggled: function(checked) {
+              var arr = editProviderToggles.slice()
+              arr[index] = { id: modelData.id, enabled: checked }
+              editProviderToggles = arr
+            }
+          }
+        }
+      }
+
+      NText {
+        text: pluginApi?.tr("settings.providersNote")
+        color: Color.mOnSurfaceVariant
+        wrapMode: Text.Wrap
+        Layout.fillWidth: true
+        pointSize: Style.fontSizeXS
+        visible: editProviderToggles.length > 0
+      }
+    }
+  }
+
+  // ── General settings ──
   NTextInput {
     Layout.fillWidth: true
     label: pluginApi?.tr("settings.codexbarPath")
@@ -109,6 +194,13 @@ ColumnLayout {
     pluginApi.pluginSettings.autoRefresh = root.editAutoRefresh
     pluginApi.pluginSettings.installDir = root.editInstallDir
     pluginApi.saveSettings()
+
+    // Save provider config to ~/.codexbar/config.json
+    var ids = enabledProviderIds()
+    if (mainInstance && editProviderToggles.length > 0) {
+      mainInstance.saveProviderConfig(ids)
+    }
+
     pluginApi.mainInstance?.checkCli()
   }
 }

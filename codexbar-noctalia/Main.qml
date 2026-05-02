@@ -34,6 +34,7 @@ Item {
   property string currentUsageProvider: ""
   property var providers: []
   property var providerErrors: []
+  property var allProviders: [] // full list from config dump: [{id, enabled}]
   property string errorMessage: ""
   property string lastUpdate: ""
   property bool configParsed: false
@@ -76,6 +77,7 @@ Item {
     function refresh() { root.refreshUsage() }
     function install() { root.installCli() }
     function update() { root.updateCli() }
+    function loadProviders() { root.loadProviders() }
 
     function toggle() {
       if (root.pluginApi) {
@@ -257,7 +259,10 @@ Item {
         providers = []
         providerErrors = []
       }
-      if (installed && runtimeOk) refreshUsage()
+      if (installed && runtimeOk) {
+        refreshUsage()
+        loadProviders()
+      }
     } catch (e) {
       errorMessage = trText("errors.parseStatus") + ": " + e.message
       Logger.e("CodexBarNoctalia", errorMessage)
@@ -296,11 +301,53 @@ Item {
       }
       var data = JSON.parse(trimmed)
       configParsed = true
+
+      // Store full provider list for Settings UI
+      if (Array.isArray(data?.providers)) {
+        allProviders = data.providers.map(function(p) { return { id: p.id || "", enabled: !!p.enabled } })
+      }
+
       startUsageQueue(configuredProviderIds(data))
     } catch (e) {
       finishUsageRefresh(trText("errors.parseConfig") + ": " + e.message)
       Logger.e("CodexBarNoctalia", errorMessage)
     }
+  }
+
+  function loadProviders() {
+    if (!ready) return
+    var cmd = [effectiveCodexbarPath(), "config", "dump", "--format", "json", "--json-only", "--log-level", "critical"]
+    providerLoadProcess.command = cmd
+    providerLoadProcess.running = true
+  }
+
+  function applyProviderLoad(text) {
+    try {
+      var trimmed = String(text).trim()
+      if (!trimmed) return
+      var data = JSON.parse(trimmed)
+      if (Array.isArray(data?.providers)) {
+        allProviders = data.providers.map(function(p) { return { id: p.id || "", enabled: !!p.enabled } })
+      }
+    } catch (e) {
+      Logger.w("CodexBarNoctalia", "Failed to load providers: " + e.message)
+    }
+  }
+
+  function saveProviderConfig(enabledIds) {
+    // Build the config JSON from allProviders, flipping enabled flags
+    var entries = []
+    for (var i = 0; i < allProviders.length; i++) {
+      var p = allProviders[i]
+      var isEnabled = enabledIds.indexOf(p.id) !== -1
+      entries.push({ id: p.id, enabled: isEnabled })
+    }
+    var configObj = { version: 1, providers: entries }
+    var json = JSON.stringify(configObj, null, 2)
+
+    // Write to ~/.codexbar/config.json
+    saveConfigProcess.command = ["sh", "-lc", "mkdir -p ~/.codexbar && cat > ~/.codexbar/config.json << 'CODEXBAR_EOF'\n" + json + "\nCODEXBAR_EOF\nchmod 600 ~/.codexbar/config.json"]
+    saveConfigProcess.running = true
   }
 
   function stripAnsi(text) {
@@ -502,6 +549,37 @@ Item {
 
       root.usageTimedOut = false
       if (root.refreshing) root.startNextUsageProvider()
+    }
+  }
+
+  Process {
+    id: providerLoadProcess
+    stdout: StdioCollector {
+      onStreamFinished: {
+        if (this.text.trim()) root.applyProviderLoad(this.text)
+      }
+    }
+    stderr: StdioCollector { id: providerLoadStderr }
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode !== 0) {
+        Logger.w("CodexBarNoctalia", "Failed to load providers: " + providerLoadStderr.text.trim())
+      }
+    }
+  }
+
+  Process {
+    id: saveConfigProcess
+    stdout: StdioCollector { id: saveConfigStdout }
+    stderr: StdioCollector { id: saveConfigStderr }
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0) {
+        Logger.i("CodexBarNoctalia", "Provider config saved")
+        // Reload providers and refresh usage
+        loadProviders()
+        refreshUsage()
+      } else {
+        Logger.e("CodexBarNoctalia", "Failed to save provider config: " + saveConfigStderr.text.trim())
+      }
     }
   }
 }
