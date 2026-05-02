@@ -1,7 +1,7 @@
 {
   "id": "codexbar-noctalia",
   "name": "CodexBar Noctalia",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "minNoctaliaVersion": "4.6.6",
   "author": "Ove Stokke",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "Utility"
   ],
   "entryPoints": {
-    "main": "Main.qml",
+    "main": "MainV2.qml",
     "barWidget": "BarWidget.qml",
     "panel": "Panel.qml",
     "settings": "Settings.qml"
