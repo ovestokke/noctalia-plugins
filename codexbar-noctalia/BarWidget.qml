@@ -49,7 +49,7 @@ Item {
       spacing: Style.marginS
 
       NIcon {
-        icon: busy ? "loader-2" : "brain-circuit"
+        icon: busy ? "loader-2" : "sparkles"
         pointSize: Style.fontSizeM
         color: ready ? Color.mPrimary : Color.mError
 
@@ -77,7 +77,7 @@ Item {
   NPopupContextMenu {
     id: contextMenu
     model: [
-      { "label": pluginApi?.tr("context.refresh"), "action": "refresh", "icon": "refresh-cw", "enabled": mainInstance?.ready ?? false },
+      { "label": pluginApi?.tr("context.refresh"), "action": "refresh", "icon": "refresh", "enabled": mainInstance?.ready ?? false },
       { "label": pluginApi?.tr("context.check"), "action": "check", "icon": "search" },
       { "label": pluginApi?.tr("context.settings"), "action": "settings", "icon": "settings" }
     ]
