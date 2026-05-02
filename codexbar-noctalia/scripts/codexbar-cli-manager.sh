@@ -6,6 +6,7 @@ set -euo pipefail
 
 REPO="steipete/CodexBar"
 INSTALL_DIR="${CODEXBAR_INSTALL_DIR:-$HOME/.local/bin}"
+CODEXBAR_PATH="${CODEXBAR_PATH:-}"
 COMMAND="check"
 JSON=0
 FORCE=0
@@ -29,6 +30,7 @@ Options:
 Environment:
   GITHUB_TOKEN        Optional token for GitHub API rate limits
   CODEXBAR_INSTALL_DIR Override default install directory
+  CODEXBAR_PATH        Optional explicit codexbar/CodexBarCLI path or command
 USAGE
 }
 
@@ -86,7 +88,7 @@ fetch_latest() {
   arch="$(arch_name)"
   api="https://api.github.com/repos/${REPO}/releases/latest"
   tmp="$(mktemp)"
-  curl -fsSL "${curl_auth_args[@]}" "$api" -o "$tmp" || fail "failed to fetch latest CodexBar release from GitHub"
+  curl -fsSL "${curl_auth_args[@]}" "$api" -o "$tmp" || { rm -f "$tmp"; return 1; }
   python3 - "$tmp" "$arch" <<'PY'
 import json, sys
 path, arch = sys.argv[1], sys.argv[2]
@@ -123,6 +125,16 @@ PY
 }
 
 installed_path() {
+  if [[ -n "$CODEXBAR_PATH" ]]; then
+    if [[ -x "$CODEXBAR_PATH" ]]; then
+      printf '%s\n' "$CODEXBAR_PATH"
+      return 0
+    elif command -v "$CODEXBAR_PATH" >/dev/null 2>&1; then
+      command -v "$CODEXBAR_PATH"
+      return 0
+    fi
+  fi
+
   if command -v codexbar >/dev/null 2>&1; then
     command -v codexbar
   elif [[ -x "$INSTALL_DIR/codexbar" ]]; then
@@ -163,9 +175,11 @@ missing_libraries() {
 
 dependency_hint() {
   local missing="$1"
-  if grep -qx 'libxml2.so.2' <<<"$missing"; then
-    printf 'Install the legacy libxml2 SONAME. On Arch/CachyOS: sudo pacman -S libxml2-legacy. Note: current libxml2 provides libxml2.so.16, but this CodexBarCLI build requires libxml2.so.2.'
-  fi
+  case $'\n'"$missing"$'\n' in
+    *$'\nlibxml2.so.2\n'*)
+      printf 'Install the legacy libxml2 SONAME. On Arch/CachyOS: sudo pacman -S libxml2-legacy. Note: current libxml2 provides libxml2.so.16, but this CodexBarCLI build requires libxml2.so.2.'
+      ;;
+  esac
 }
 
 fail_missing_libraries() {
@@ -264,17 +278,15 @@ install_latest() {
 
 main() {
   parse_args "$@"
-  need curl
   need python3
-  need tar
-  need sha256sum
+  if [[ "$COMMAND" == "install" || "$COMMAND" == "update" ]]; then
+    need curl
+    need tar
+    need sha256sum
+  fi
 
-  mapfile -t latest_info < <(fetch_latest)
-  local latest asset url sha_url path current installed update_available missing
-  latest="${latest_info[0]}"
-  asset="${latest_info[1]}"
-  url="${latest_info[2]}"
-  sha_url="${latest_info[3]:-}"
+  local latest asset url sha_url path current installed update_available missing latest_tmp
+  local -a latest_info=()
 
   path="$(installed_path 2>/dev/null || true)"
   current="$(installed_version 2>/dev/null || true)"
@@ -282,8 +294,24 @@ main() {
   installed=0
   [[ -n "$path" ]] && installed=1
 
+  latest=""
+  asset=""
+  url=""
+  sha_url=""
+  if command -v curl >/dev/null 2>&1; then
+    latest_tmp="$(mktemp)"
+    if fetch_latest > "$latest_tmp" 2>/dev/null; then
+      mapfile -t latest_info < "$latest_tmp"
+      latest="${latest_info[0]:-}"
+      asset="${latest_info[1]:-}"
+      url="${latest_info[2]:-}"
+      sha_url="${latest_info[3]:-}"
+    fi
+    rm -f "$latest_tmp"
+  fi
+
   update_available=0
-  if [[ "$installed" == 0 || -z "$current" || "$current" != "$latest" || "$FORCE" == 1 ]]; then
+  if [[ -n "$latest" && ( "$installed" == 0 || -z "$current" || "$current" != "$latest" || "$FORCE" == 1 ) ]]; then
     update_available=1
   fi
 
@@ -292,6 +320,7 @@ main() {
       emit_status "$installed" "$path" "$current" "$latest" "$asset" "$update_available" "$missing"
       ;;
     install|update)
+      [[ -n "$latest" && -n "$asset" && -n "$url" ]] || fail "failed to fetch latest CodexBar release from GitHub"
       if [[ "$update_available" == 1 ]]; then
         install_latest "$latest" "$asset" "$url" "$sha_url"
         path="$INSTALL_DIR/codexbar"

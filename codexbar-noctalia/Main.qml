@@ -74,7 +74,7 @@ Item {
   }
 
   function helperCommand(action) {
-    return "CODEXBAR_INSTALL_DIR=" + shellQuote(expandedInstallDir()) + " " + shellQuote(helperPath) + " " + action + " --json"
+    return "CODEXBAR_INSTALL_DIR=" + shellQuote(expandedInstallDir()) + " CODEXBAR_PATH=" + shellQuote(codexbarPath) + " " + shellQuote(helperPath) + " " + action + " --json"
   }
 
   function checkCli() {
@@ -119,6 +119,10 @@ Item {
   function applyCliStatus(text) {
     try {
       var data = JSON.parse(String(text).trim())
+      if (data.ok === false) {
+        errorMessage = data.error || pluginApi?.tr("errors.checkFailed")
+        return
+      }
       installed = data.installed ?? false
       runtimeOk = data.runtimeOk ?? false
       updateAvailable = data.updateAvailable ?? false
@@ -130,7 +134,7 @@ Item {
       if (ready) refreshUsage()
     } catch (e) {
       errorMessage = pluginApi?.tr("errors.parseStatus") + ": " + e.message
-      Logger.e("CodexBarMonitor", errorMessage)
+      Logger.e("CodexBarNoctalia", errorMessage)
     }
   }
 
@@ -141,7 +145,7 @@ Item {
       lastUpdate = Qt.formatTime(new Date(), "HH:mm")
     } catch (e) {
       errorMessage = pluginApi?.tr("errors.parseUsage") + ": " + e.message
-      Logger.e("CodexBarMonitor", errorMessage)
+      Logger.e("CodexBarNoctalia", errorMessage)
     }
   }
 
@@ -165,8 +169,8 @@ Item {
     onExited: (exitCode, exitStatus) => {
       root.checking = false
       if (exitCode !== 0) {
-        root.errorMessage = cliCheckStderr.text.trim() || pluginApi?.tr("errors.checkFailed")
-        Logger.w("CodexBarMonitor", root.errorMessage)
+        root.errorMessage = root.errorMessage || cliCheckStderr.text.trim() || pluginApi?.tr("errors.checkFailed")
+        Logger.w("CodexBarNoctalia", root.errorMessage)
       }
     }
   }
@@ -182,8 +186,8 @@ Item {
     onExited: (exitCode, exitStatus) => {
       root.installing = false
       if (exitCode !== 0) {
-        root.errorMessage = cliInstallStderr.text.trim() || pluginApi?.tr("errors.installFailed")
-        Logger.w("CodexBarMonitor", root.errorMessage)
+        root.errorMessage = root.errorMessage || cliInstallStderr.text.trim() || pluginApi?.tr("errors.installFailed")
+        Logger.w("CodexBarNoctalia", root.errorMessage)
         root.checkCli()
       }
     }
@@ -200,8 +204,8 @@ Item {
     onExited: (exitCode, exitStatus) => {
       root.refreshing = false
       if (exitCode !== 0) {
-        root.errorMessage = usageStderr.text.trim() || pluginApi?.tr("errors.usageFailed")
-        Logger.w("CodexBarMonitor", root.errorMessage)
+        root.errorMessage = root.errorMessage || usageStderr.text.trim() || pluginApi?.tr("errors.usageFailed")
+        Logger.w("CodexBarNoctalia", root.errorMessage)
       }
     }
   }
