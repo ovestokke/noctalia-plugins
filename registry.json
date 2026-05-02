@@ -3,7 +3,7 @@
     {
       "id": "codexbar-noctalia",
       "name": "CodexBar Noctalia",
-      "version": "1.0.5",
+      "version": "1.1.0",
       "description": "Monitor AI coding assistant usage through the CodexBar CLI.",
       "author": "Ove Stokke",
       "tags": [
