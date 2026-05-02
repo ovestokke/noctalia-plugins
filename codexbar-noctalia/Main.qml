@@ -110,7 +110,7 @@ Item {
     refreshing = true
     errorMessage = ""
 
-    var args = [effectiveCodexbarPath(), "--source", source, "--provider", provider, "--format", "json"]
+    var args = [effectiveCodexbarPath(), "usage", "--source", source, "--provider", provider, "--format", "json", "--json-only"]
     if (includeStatus) args.push("--status")
     usageProcess.command = args
     usageProcess.running = true

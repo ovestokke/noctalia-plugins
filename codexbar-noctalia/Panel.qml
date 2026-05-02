@@ -48,7 +48,9 @@ Item {
 
       NBox {
         Layout.fillWidth: true
+        Layout.preferredHeight: statusColumn.implicitHeight + Style.marginM * 2
         ColumnLayout {
+          id: statusColumn
           anchors.fill: parent
           anchors.margins: Style.marginM
           spacing: Style.marginS
