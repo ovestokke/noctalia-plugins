@@ -3,11 +3,11 @@
 This is a small custom Noctalia plugin registry containing a few experimental plugins:
 
 - `pi-noctalia` — Dynamic-Island-style coding-agent activity capsule for Noctalia Shell
-- `codexbar-monitor` — AI coding assistant usage monitor backed by the CodexBar CLI
+- `codexbar-noctalia` — AI coding assistant usage monitor backed by the CodexBar CLI
 
 ## Install as a custom registry
 
-Add this repository as a custom plugin source in Noctalia Shell, then install `pi-noctalia` from the registry.
+Add this repository as a custom plugin source in Noctalia Shell, then install `pi-noctalia` or `codexbar-noctalia` from the registry.
 
 Repository:
 
@@ -19,7 +19,7 @@ This registry is intended to stay minimal while `pi-noctalia` evolves outside th
 
 ```text
 pi-noctalia/
-codexbar-monitor/
+codexbar-noctalia/
 registry.json
 schema.json
 README.md

@@ -19,8 +19,8 @@
       ]
     },
     {
-      "id": "codexbar-monitor",
-      "name": "CodexBar Monitor",
+      "id": "codexbar-noctalia",
+      "name": "CodexBar Noctalia",
       "version": "1.0.0",
       "official": false,
       "author": "OveStokke",
@@ -30,9 +30,7 @@
       "license": "MIT",
       "tags": [
         "Bar",
-        "Panel",
-        "Development",
-        "Experimental"
+        "Utility"
       ]
     }
   ]
