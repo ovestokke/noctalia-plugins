@@ -89,9 +89,13 @@ Item {
       NBox {
         Layout.fillWidth: true
         visible: !(mainInstance?.installed ?? false) || !(mainInstance?.runtimeOk ?? false) || (mainInstance?.errorMessage || "") !== "" || (mainInstance?.updateAvailable ?? false)
+        implicitHeight: errorColumn.implicitHeight + Style.marginM * 2
 
         ColumnLayout {
-          anchors.fill: parent
+          id: errorColumn
+          anchors.top: parent.top
+          anchors.left: parent.left
+          anchors.right: parent.right
           anchors.margins: Style.marginM
           spacing: Style.marginS
 

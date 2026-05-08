@@ -1,7 +1,7 @@
 {
   "id": "codexbar-noctalia",
   "name": "CodexBar Noctalia",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "minNoctaliaVersion": "4.6.6",
   "author": "Ove Stokke",
   "license": "MIT",
