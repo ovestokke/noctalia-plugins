@@ -1,0 +1,13 @@
+# Credentials and local overrides
+*.token
+**/token
+**/reminder-deliveries.json
+.env
+.env.*
+
+# Python checks
+__pycache__/
+*.pyc
+
+# Editor and OS noise
+.DS_Store

@@ -1,0 +1,44 @@
+id = "ovestokke/memos"
+name = "Memos"
+version = "0.1.0"
+plugin_api = 22
+author = "ovestokke"
+license = "MIT"
+dependencies = []
+tags = ["bar", "panel", "productivity", "service"]
+icon = "notes"
+description = "Capture private notes and follow recent activity from a self-hosted Memos instance."
+
+[[setting]]
+key = "instance_url"
+type = "string"
+label_key = "settings.instance_url.label"
+description_key = "settings.instance_url.description"
+default = ""
+
+[[setting]]
+key = "token_file"
+type = "file"
+label_key = "settings.token_file.label"
+description_key = "settings.token_file.description"
+default = ""
+extensions = []
+advanced = true
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 440
+height = 620
+placement = "attached"
+position = "auto"
+open_near_click = true
+keyboard_focus = "on_demand"
+
+[[service]]
+id = "service"
+entry = "service.luau"

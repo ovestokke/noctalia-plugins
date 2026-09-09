@@ -1,0 +1,123 @@
+{
+  "actions": {
+    "back": "Tilbake",
+    "close": "Lukk",
+    "refresh": "Oppdater",
+    "settings": "Programtillegginnstillinger"
+  },
+  "credentials": {
+    "errors": {
+      "empty": "Lim inn et token før du lagrer.",
+      "permissions": "Kunne ikke beskytte tokenfilen.",
+      "storage": "Noctalias datamappe for programtillegget er utilgjengelig.",
+      "write": "Kunne ikke skrive tokenfilen."
+    },
+    "external_selected": "En ekstern tokenfil er valgt. Tøm feltet i innstillingene for å bruke et innlimt token.",
+    "help": "Tokenet lagres i Noctalias private datamappe for programtillegget.",
+    "placeholder": "Lim inn personlig tilgangstoken",
+    "save": "Lagre token",
+    "saved": "Tokenet er lagret sikkert. Validerer…",
+    "saving": "Beskytter og lagrer token…",
+    "title": "Tilgangstoken"
+  },
+  "capture": {
+    "errors": {
+      "empty_memo": "Skriv noe før du lagrer.",
+      "encode_failed": "Kunne ikke klargjøre notatet.",
+      "forbidden": "Tokenet har ikke tilgang til å opprette notater.",
+      "invalid_json": "Serveren returnerte et ugyldig svar.",
+      "network_error": "Kunne ikke nå Memos-instansen.",
+      "not_connected": "Koble til Memos før du lagrer.",
+      "request_rejected": "Noctalia kunne ikke starte forespørselen.",
+      "server_error": "Memos-instansen avviste notatet.",
+      "unauthorized": "Tokenet er ikke lenger gyldig."
+    },
+    "hint": "Ctrl+Enter lagrer · nye notater er private",
+    "placeholder": "Skriv et privat notat…",
+    "save": "Lagre notat",
+    "saved": "Privat notat lagret.",
+    "sending": "Lagrer…",
+    "title": "Hurtignotat"
+  },
+  "memos": {
+    "empty": "Ingen nylige notater ennå.",
+    "empty_content": "(Tomt notat)",
+    "title": "Nylige notater"
+  },
+  "reminders": {
+    "clear": "Fjern påminnelse",
+    "custom": {
+      "apply": "Angi",
+      "date": "Dato",
+      "date_placeholder": "ÅÅÅÅ-MM-DD",
+      "open": "Velg nøyaktig dato og klokkeslett",
+      "time": "Tid",
+      "time_placeholder": "TT:MM"
+    },
+    "empty_notification": "En Memos-påminnelse har forfalt.",
+    "errors": {
+      "invalid": "Oppgi en gyldig dato og tid.",
+      "past": "Velg et tidspunkt i fremtiden."
+    },
+    "memo_time": "Påminnelse · {time}",
+    "none": "Ingen påminnelse",
+    "notification_title": "Memos-påminnelse",
+    "presets": {
+      "0700": "07:00",
+      "1200": "12:00",
+      "1600": "16:00",
+      "2000": "20:00"
+    },
+    "selected": "Påminnelse satt til {time}",
+    "title": "Påminnelse"
+  },
+  "settings": {
+    "title": "Memos-innstillinger",
+    "connection": {
+      "description": "Endre instansadressen eller overstyringen for ekstern tokenfil i Noctalia-innstillingene.",
+      "open": "Åpne Noctalia-innstillinger",
+      "title": "Tilkobling"
+    },
+    "instance_url": {
+      "description": "Grunnadressen til Memos-instansen. HTTPS kreves, unntatt for localhost.",
+      "label": "Instansadresse"
+    },
+    "token_file": {
+      "description": "Valgfri ekstern tokenfil. Når den er angitt, overstyrer den tokenet som lagres fra panelet.",
+      "label": "Ekstern tokenfil"
+    }
+  },
+  "status": {
+    "connected": "Tilkoblet · sanntidsoppdatering aktiv",
+    "connecting": "Validerer tilkoblingen…",
+    "forbidden": "Tokenet har ikke nødvendig tilgang.",
+    "invalid_json": "Serveren returnerte ugyldig JSON.",
+    "invalid_url": "Oppgi en gyldig HTTPS-adresse.",
+    "live_connecting": "Tilkoblet · starter sanntidsoppdatering…",
+    "live_reconnecting": "Tilkoblet · kobler til sanntidsoppdatering på nytt…",
+    "network_error": "Kunne ikke nå Memos-instansen.",
+    "request_rejected": "Noctalia kunne ikke starte forespørselen.",
+    "server_error": "Memos-instansen returnerte en feil.",
+    "token_empty": "Tokenfilen er tom.",
+    "token_file_unreadable": "Den eksterne tokenfilen kunne ikke leses.",
+    "token_missing": "Legg til et personlig tilgangstoken i programtillegginnstillingene.",
+    "token_storage_unavailable": "Noctalias datamappe for programtillegget er utilgjengelig.",
+    "unauthorized": "Tilgangstokenet er ugyldig eller utløpt.",
+    "unconfigured": "Konfigurer adressen til Memos-instansen."
+  },
+  "time": {
+    "timestamp": "{date} {time}"
+  },
+  "title": "Memos",
+  "visibility": {
+    "private": "Privat",
+    "protected": "Beskyttet",
+    "public": "Offentlig",
+    "space": "Område",
+    "unknown": "Ukjent"
+  },
+  "widget": {
+    "label": "Memos",
+    "tooltip": "Memos — {status}"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "actions": {
+    "back": "Back",
+    "close": "Close",
+    "refresh": "Refresh",
+    "settings": "Plugin settings"
+  },
+  "credentials": {
+    "errors": {
+      "empty": "Paste a token before saving.",
+      "permissions": "Could not protect the token file.",
+      "storage": "Noctalia's plugin data directory is unavailable.",
+      "write": "Could not write the token file."
+    },
+    "external_selected": "An external token file is selected. Clear it in plugin settings to use a pasted token.",
+    "help": "The token is stored in Noctalia's private plugin data directory.",
+    "placeholder": "Paste personal access token",
+    "save": "Save token",
+    "saved": "Token saved securely. Validating…",
+    "saving": "Protecting and saving token…",
+    "title": "Access token"
+  },
+  "capture": {
+    "errors": {
+      "empty_memo": "Write something before saving.",
+      "encode_failed": "Could not prepare the memo.",
+      "forbidden": "The token is not allowed to create memos.",
+      "invalid_json": "The server returned an invalid response.",
+      "network_error": "Could not reach the Memos instance.",
+      "not_connected": "Connect to Memos before saving.",
+      "request_rejected": "Noctalia could not start the request.",
+      "server_error": "The Memos instance rejected the memo.",
+      "unauthorized": "The token is no longer valid."
+    },
+    "hint": "Ctrl+Enter saves · new memos are private",
+    "placeholder": "Write a private memo…",
+    "save": "Save memo",
+    "saved": "Private memo saved.",
+    "sending": "Saving…",
+    "title": "Quick capture"
+  },
+  "memos": {
+    "empty": "No recent memos yet.",
+    "empty_content": "(Empty memo)",
+    "title": "Recent memos"
+  },
+  "reminders": {
+    "clear": "Remove reminder",
+    "custom": {
+      "apply": "Set",
+      "date": "Date",
+      "date_placeholder": "YYYY-MM-DD",
+      "open": "Choose an exact date and time",
+      "time": "Time",
+      "time_placeholder": "HH:MM"
+    },
+    "empty_notification": "A memo reminder is due.",
+    "errors": {
+      "invalid": "Enter a valid date and time.",
+      "past": "Choose a time in the future."
+    },
+    "memo_time": "Reminder · {time}",
+    "none": "No reminder",
+    "notification_title": "Memos reminder",
+    "presets": {
+      "0700": "07:00",
+      "1200": "12:00",
+      "1600": "16:00",
+      "2000": "20:00"
+    },
+    "selected": "Reminder set for {time}",
+    "title": "Reminder"
+  },
+  "settings": {
+    "title": "Memos settings",
+    "connection": {
+      "description": "Change the instance URL or external token-file override in Noctalia settings.",
+      "open": "Open Noctalia settings",
+      "title": "Connection"
+    },
+    "instance_url": {
+      "description": "Base URL of your Memos instance. HTTPS is required except for localhost.",
+      "label": "Instance URL"
+    },
+    "token_file": {
+      "description": "Optional external token file. When set, it overrides the token saved from the panel.",
+      "label": "External token file"
+    }
+  },
+  "status": {
+    "connected": "Connected · live updates active",
+    "connecting": "Validating connection…",
+    "forbidden": "The token does not have permission.",
+    "invalid_json": "The server returned invalid JSON.",
+    "invalid_url": "Enter a valid HTTPS instance URL.",
+    "live_connecting": "Connected · starting live updates…",
+    "live_reconnecting": "Connected · reconnecting live updates…",
+    "network_error": "Could not reach the Memos instance.",
+    "request_rejected": "Noctalia could not start the request.",
+    "server_error": "The Memos instance returned an error.",
+    "token_empty": "The token file is empty.",
+    "token_file_unreadable": "The external token file could not be read.",
+    "token_missing": "Add a personal access token in plugin settings.",
+    "token_storage_unavailable": "Noctalia's plugin data directory is unavailable.",
+    "unauthorized": "The personal access token is invalid or expired.",
+    "unconfigured": "Configure the Memos instance URL."
+  },
+  "time": {
+    "timestamp": "{date} {time}"
+  },
+  "title": "Memos",
+  "visibility": {
+    "private": "Private",
+    "protected": "Protected",
+    "public": "Public",
+    "space": "Space",
+    "unknown": "Unknown"
+  },
+  "widget": {
+    "label": "Memos",
+    "tooltip": "Memos — {status}"
+  }
+}

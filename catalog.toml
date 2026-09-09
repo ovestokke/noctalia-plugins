@@ -1,0 +1,12 @@
+[[plugin]]
+id = "ovestokke/memos"
+name = "Memos"
+version = "0.1.0"
+author = "ovestokke"
+license = "MIT"
+icon = "notes"
+description = "Capture private notes and follow recent activity from a self-hosted Memos instance."
+deprecated = false
+plugin_api = 22
+tags = ["bar", "panel", "productivity", "service"]
+dependencies = []
