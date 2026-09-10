@@ -63,6 +63,8 @@ Force a connection validation and refresh through the service:
 noctalia msg plugin ovestokke/memos:service all validate
 ```
 
+Each memo has icon buttons to pin or unpin, edit its content, and archive it. Pinned memos appear first. Archiving removes a memo from this list without permanently deleting it. Editing preserves its visibility and reminder.
+
 ## Settings
 
 `instance_url` and the optional `token_file` override are plugin-level Noctalia settings. The panel's settings view manages the personal access token separately so it never enters Noctalia's TOML configuration. Noctalia restarts the service when either manifest setting changes.
@@ -73,6 +75,7 @@ Run the repository smoke check and Noctalia's offline plugin lint:
 
 ```sh
 python3 tools/smoke.py
+python3 tools/test_crud.py
 noctalia plugins lint memos
 nix shell nixpkgs#luau --command sh -lc \
   'for file in memos/*.luau memos/lib/*.luau; do luau-compile "$file" >/dev/null || exit 1; done'
@@ -100,4 +103,4 @@ python3 .github/workflows/validate-plugins.py --root .
 
 ## Not in this version
 
-Editing, deletion, attachments, spaces, and launcher integration are deferred. They are not implemented in this release.
+Permanent deletion, attachments, spaces, and launcher integration are not implemented in this release.

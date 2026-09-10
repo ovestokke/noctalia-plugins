@@ -9,6 +9,11 @@ local connection = noctalia.state.get("connection") or {
 }
 local memos = noctalia.state.get("memos") or {}
 local capture = noctalia.state.get("capture") or { state = "idle", sequence = 0, error = "" }
+local editingName = nil
+local editDraft = ""
+local editKey = 0
+local mutation = noctalia.state.get("mutation") or { state = "idle", error = "" }
+local pendingMutation = nil
 local draft = ""
 local draftKey = 0
 local reminderEpoch = nil
@@ -326,6 +331,78 @@ local function settingsView()
   })
 end
 
+local function submitMutation(action, name, pinned)
+  if mutation.state == "sending" or connection.state ~= "connected" then
+    return
+  end
+  commandSequence += 1
+  pendingMutation = commandSequence
+  mutation = { state = "sending", error = "" }
+  render()
+  noctalia.state.set("command", {
+    action = action,
+    name = name,
+    pinned = pinned,
+    content = if action == "update" then editDraft else nil,
+    sequence = commandSequence,
+  })
+end
+
+local function memoActions(memo)
+  local busy = mutation.state == "sending"
+  local canAct = not busy and connection.state == "connected" and memo.name ~= "" and editingName == nil
+  return ui.column({ gap = 8 }, {
+    ui.row({ gap = 8 }, {
+      ui.button({
+        tooltip = noctalia.tr(if memo.pinned then "crud.unpin" else "crud.pin"),
+        glyph = "pin", variant = "ghost", selected = memo.pinned == true, enabled = canAct,
+        onClick = function() submitMutation("pin", memo.name, not memo.pinned) end,
+      }),
+      ui.button({
+        tooltip = noctalia.tr("crud.edit"), glyph = "pencil", variant = "ghost", enabled = canAct,
+        onClick = function()
+          editingName = memo.name
+          editDraft = memo.content
+          editKey += 1
+          mutation = { state = "idle", error = "" }
+          render()
+        end,
+      }),
+      ui.button({
+        tooltip = noctalia.tr("crud.archive"), glyph = "archive", variant = "ghost", enabled = canAct,
+        onClick = function() submitMutation("archive", memo.name) end,
+      }),
+    }),
+    ui.column({ visible = editingName == memo.name, gap = 8 }, {
+      ui.input({
+        key = "edit-" .. memo.name .. "-" .. tostring(editKey),
+        value = editDraft, multiline = true, submitOnEnter = false, height = 140,
+        enabled = not busy,
+        onChange = function(value)
+          editDraft = if type(value) == "string" then value else ""
+          render()
+        end,
+        onSubmit = function()
+          if noctalia.string.trim(editDraft) ~= "" then
+            submitMutation("update", memo.name)
+          end
+        end,
+      }),
+      ui.row({ gap = 8 }, {
+        ui.button({
+          text = noctalia.tr("crud.save"), variant = "primary",
+          enabled = not busy and connection.state == "connected" and noctalia.string.trim(editDraft) ~= "",
+          onClick = function() submitMutation("update", memo.name) end,
+        }),
+        ui.button({
+          text = noctalia.tr("crud.cancel"), variant = "ghost", enabled = not busy,
+          onClick = function() editingName = nil; render() end,
+        }),
+      }),
+    }),
+  })
+end
+
 local function memoRows()
   local rows = {}
   if #memos == 0 then
@@ -368,7 +445,8 @@ local function memoRows()
         color = "secondary",
         fontSize = 11,
       }),
-      ui.markdown({ text = content }),
+      ui.markdown({ visible = editingName ~= memo.name, text = content }),
+      memoActions(memo),
     }))
   end
   return rows
@@ -452,6 +530,12 @@ render = function()
 
     ui.separator({ color = "outline/0.45" }),
     ui.label({ text = noctalia.tr("memos.title"), fontWeight = "semibold", color = "on_surface" }),
+    ui.label({
+      visible = mutation.state == "error" or mutation.state == "sending",
+      text = if mutation.state == "error" then noctalia.tr("crud.errors." .. mutation.error) else noctalia.tr("crud.sending"),
+      color = if mutation.state == "error" then "error" else "on_surface_variant",
+      fontSize = 11,
+    }),
     ui.scroll({ flexGrow = 1, gap = 10 }, memoRows()),
   }))
 end
@@ -468,6 +552,19 @@ noctalia.state.watch("memos", function(value)
     memos = value
     render()
   end
+end)
+
+noctalia.state.watch("mutation", function(value)
+  if type(value) ~= "table" then return end
+  mutation = value
+  if pendingMutation ~= nil and value.sequence == pendingMutation and value.state ~= "sending" then
+    pendingMutation = nil
+    if value.state == "success" then
+      editingName = nil
+      editDraft = ""
+    end
+  end
+  render()
 end)
 
 noctalia.state.watch("capture", function(value)

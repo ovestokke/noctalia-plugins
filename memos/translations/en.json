@@ -5,6 +5,26 @@
     "refresh": "Refresh",
     "settings": "Plugin settings"
   },
+  "crud": {
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "edit": "Edit",
+    "archive": "Archive",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "sending": "Applying changes…",
+    "errors": {
+      "empty_memo": "Write something before saving.",
+      "invalid_memo": "This memo has an invalid identifier.",
+      "encode_failed": "Could not prepare the memo.",
+      "forbidden": "You do not have permission to change this memo.",
+      "network_error": "Could not reach Memos. Your edits are retained.",
+      "not_connected": "Connect to Memos before making changes.",
+      "request_rejected": "Noctalia could not start the request.",
+      "server_error": "Memos rejected the change. The memo may have been deleted.",
+      "unauthorized": "The token is no longer valid."
+    }
+  },
   "credentials": {
     "errors": {
       "empty": "Paste a token before saving.",

@@ -154,7 +154,7 @@ fetchMemos = function()
   fetchAgain = false
   local filter = `creator == "{currentUserName}"`
   local path = "/api/v1/memos?pageSize=20&state=NORMAL&orderBy="
-    .. noctalia.string.urlEncode("create_time desc")
+    .. noctalia.string.urlEncode("pinned desc, create_time desc")
     .. "&filter="
     .. noctalia.string.urlEncode(filter)
 
@@ -184,6 +184,7 @@ fetchMemos = function()
           content = if type(memo.content) == "string" then memo.content else "",
           createTime = if type(memo.createTime) == "string" then memo.createTime else "",
           visibility = if type(memo.visibility) == "string" then memo.visibility else "",
+          pinned = memo.pinned == true,
           reminderTime = if type(memo.reminderTime) == "string" then memo.reminderTime else "",
         })
       end
@@ -446,6 +447,77 @@ local function createMemo(sequence, content, reminderTime)
   end
 end
 
+local mutationInFlight = false
+
+local function mutateMemo(command)
+  if mutationInFlight then
+    return
+  end
+  local sequence = tonumber(command.sequence) or 0
+  local function publish(state, errorCode)
+    noctalia.state.set("mutation", { state = state, sequence = sequence, error = errorCode or "" })
+  end
+  if not connected or client == nil then
+    publish("error", "not_connected")
+    return
+  end
+  if type(command.name) ~= "string" or string.match(command.name, "^memos/[%w_-]+$") == nil then
+    publish("error", "invalid_memo")
+    return
+  end
+  local path = "/api/v1/" .. command.name
+  local fields = { name = command.name }
+  local mask
+  if command.action == "update" then
+    if type(command.content) ~= "string" or noctalia.string.trim(command.content) == "" then
+      publish("error", "empty_memo")
+      return
+    end
+    mask = "content"
+    fields.content = command.content
+  elseif command.action == "pin" and type(command.pinned) == "boolean" then
+    mask = "pinned"
+    fields.pinned = command.pinned
+  elseif command.action == "archive" then
+    mask = "state"
+    fields.state = "ARCHIVED"
+  else
+    publish("error", "invalid_memo")
+    return
+  end
+  path = path .. "?updateMask=" .. mask
+  local body = noctalia.json.encode(fields)
+  if body == nil then
+    publish("error", "encode_failed")
+    return
+  end
+  local requestClient = client
+  mutationInFlight = true
+  publish("sending")
+  local accepted = Client.request(requestClient, "PATCH", path, body, function(response)
+    mutationInFlight = false
+    if client ~= requestClient then
+      publish("error", "not_connected")
+      return
+    end
+    local errorCode = Client.statusError(response)
+    if errorCode ~= nil then
+      publish("error", errorCode)
+      if errorCode == "unauthorized" or errorCode == "forbidden" then
+        setConnectionFailure(errorCode, response.status)
+      end
+      return
+    end
+    publish("success")
+    fetchMemos()
+    fetchReminders()
+  end)
+  if not accepted then
+    mutationInFlight = false
+    publish("error", "request_rejected")
+  end
+end
+
 local function handleCommand(command)
   if type(command) ~= "table" or type(command.action) ~= "string" then
     return
@@ -459,6 +531,9 @@ local function handleCommand(command)
     end
   elseif command.action == "credentials_changed" then
     validateConnection()
+  elseif command.action == "update" or command.action == "pin" or command.action == "archive" then
+    noctalia.state.set("command", { action = "ack", sequence = command.sequence })
+    mutateMemo(command)
   elseif command.action == "create" then
     local sequence = tonumber(command.sequence) or 0
     local content = command.content

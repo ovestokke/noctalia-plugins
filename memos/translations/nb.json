@@ -5,6 +5,26 @@
     "refresh": "Oppdater",
     "settings": "Programtillegginnstillinger"
   },
+  "crud": {
+    "pin": "Fest",
+    "unpin": "Løsne",
+    "edit": "Rediger",
+    "archive": "Arkiver",
+    "save": "Lagre endringer",
+    "cancel": "Avbryt",
+    "sending": "Utfører endringen…",
+    "errors": {
+      "empty_memo": "Skriv noe før du lagrer.",
+      "invalid_memo": "Notatet har en ugyldig identifikator.",
+      "encode_failed": "Kunne ikke klargjøre notatet.",
+      "forbidden": "Du har ikke tilgang til å endre dette notatet.",
+      "network_error": "Kunne ikke nå Memos. Endringene dine er beholdt.",
+      "not_connected": "Koble til Memos før du gjør endringer.",
+      "request_rejected": "Noctalia kunne ikke starte forespørselen.",
+      "server_error": "Memos avviste endringen. Notatet kan være slettet.",
+      "unauthorized": "Tokenet er ikke lenger gyldig."
+    }
+  },
   "credentials": {
     "errors": {
       "empty": "Lim inn et token før du lagrer.",
