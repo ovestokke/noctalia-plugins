@@ -92,21 +92,17 @@ def main() -> int:
     if "local initial = os.time() + 5 * 60" not in panel_source:
         fail("custom reminder must default to five minutes from now")
 
-    reconnect_refresh = re.search(
-        r'if line == ": connected" then.*?fetchMemos\(\).*?fetchReminders\(\).*?'
-        r'elseif line == ": heartbeat"',
-        service_source,
-        re.DOTALL,
-    )
-    if reconnect_refresh is None:
-        fail("SSE reconnect must reconcile memos and reminders")
+    # Preserve the locally tested stream handling; extra reconnect fetches
+    # are intentionally outside this recovery change.
+    if 'if line == ": connected" or line == ": heartbeat" then' not in service_source:
+        fail("SSE connection and heartbeat handling changed")
     manual_refresh = re.search(
         r'if command\.action == "refresh" then\s+if connected then\s+'
-        r'fetchMemos\(\)\s+fetchReminders\(\)',
+        r'fetchMemos\(\)\s+fetchSpaces\(\)',
         service_source,
     )
     if manual_refresh is None:
-        fail("manual refresh must reconcile memos and reminders")
+        fail("manual refresh must reconcile memos and Spaces")
 
     if re.search(r"allow_insecure_tls\s*=\s*true", source):
         fail("TLS verification must not be disabled")

@@ -370,14 +370,7 @@ startStream = function()
   reconnectAt = nil
   publishConnection("connected", "connecting")
   local handle = Client.stream(client, "/api/v1/sse", function(line)
-    if line == ": connected" then
-      reconnectAttempt = 0
-      publishConnection("connected", "connected")
-      fetchMemos()
-      fetchReminders()
-      fetchSpaces()
-      return
-    elseif line == ": heartbeat" then
+    if line == ": connected" or line == ": heartbeat" then
       reconnectAttempt = 0
       publishConnection("connected", "connected")
       return
@@ -625,7 +618,6 @@ local function handleCommand(command)
   if command.action == "refresh" then
     if connected then
       fetchMemos()
-      fetchReminders()
       fetchSpaces()
     else
       validateConnection()
