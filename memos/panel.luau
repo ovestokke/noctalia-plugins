@@ -8,6 +8,7 @@ local connection = noctalia.state.get("connection") or {
   sse = "disconnected",
 }
 local memos = noctalia.state.get("memos") or {}
+local spaces = noctalia.state.get("spaces") or { items = {}, selected = "", revision = 0, state = "loading" }
 local capture = noctalia.state.get("capture") or { state = "idle", sequence = 0, error = "" }
 local editingName = nil
 local editDraft = ""
@@ -19,6 +20,7 @@ local draftKey = 0
 local reminderEpoch = nil
 local reminderPreset = ""
 local showCustomReminder = false
+local showReminderEditor = false
 local customReminderDate = ""
 local customReminderTime = ""
 local customReminderKey = 0
@@ -165,6 +167,7 @@ local function setReminderPreset(preset)
   reminderEpoch = Reminder.nextLocalHour(preset.hour, os.time())
   reminderPreset = preset.key
   showCustomReminder = false
+  showReminderEditor = false
   reminderError = ""
   render()
 end
@@ -190,6 +193,7 @@ local function applyCustomReminder()
   reminderEpoch = epoch
   reminderPreset = "custom"
   showCustomReminder = false
+  showReminderEditor = false
   reminderError = ""
   render()
 end
@@ -350,7 +354,7 @@ end
 
 local function memoActions(memo)
   local busy = mutation.state == "sending"
-  local canAct = not busy and connection.state == "connected" and memo.name ~= "" and editingName == nil
+  local canAct = memo.canEdit == true and not busy and connection.state == "connected" and memo.name ~= "" and editingName == nil
   return ui.column({ gap = 8 }, {
     ui.row({ gap = 8 }, {
       ui.button({
@@ -452,6 +456,50 @@ local function memoRows()
   return rows
 end
 
+local function spacePicker()
+  local options = { noctalia.tr("spaces.personal") }
+  local names = { "" }
+  local selectedIndex = 0
+  local titleCounts = {}
+  for _, space in ipairs(spaces.items) do
+    local title = if type(space.title) == "string" and space.title ~= "" then space.title else noctalia.tr("spaces.untitled")
+    titleCounts[title] = (titleCounts[title] or 0) + 1
+  end
+  local titleOccurrences = {}
+  for _, space in ipairs(spaces.items) do
+    local title = if type(space.title) == "string" and space.title ~= "" then space.title else noctalia.tr("spaces.untitled")
+    titleOccurrences[title] = (titleOccurrences[title] or 0) + 1
+    local label = if titleCounts[title] > 1 then title .. " (" .. tostring(titleOccurrences[title]) .. ")" else title
+    table.insert(options, label)
+    table.insert(names, space.name)
+    if space.name == spaces.selected then selectedIndex = #options - 1 end
+  end
+  local found = spaces.selected == "" or names[selectedIndex + 1] == spaces.selected
+  if not found then
+    table.insert(options, noctalia.tr("spaces.unavailable_short"))
+    table.insert(names, spaces.selected)
+    selectedIndex = #options - 1
+  end
+  return ui.select({
+      flexGrow = 1,
+      controlSize = "sm",
+      options = options,
+      selectedIndex = selectedIndex,
+      enabled = connection.state == "connected" and capture.state ~= "sending"
+        and mutation.state ~= "sending" and editingName == nil,
+      onChange = function(index, _text)
+        local name = names[(tonumber(index) or -1) + 1]
+        if name == nil or name == spaces.selected or capture.state == "sending" then return end
+        commandSequence += 1
+        noctalia.state.set("command", { action = "select_space", space = name, sequence = commandSequence })
+      end,
+    })
+end
+
+local function destinationReady()
+  return spaces.selected == "" or spaces.state == "ready"
+end
+
 render = function()
   if not isOpen then
     return
@@ -465,14 +513,12 @@ render = function()
   local statusMessage = captureText()
   local connected = connection.state == "connected"
   local sending = capture.state == "sending"
-  local canSubmit = connected and not sending and noctalia.string.trim(draft) ~= ""
+  local canSubmit = connected and destinationReady() and not sending and noctalia.string.trim(draft) ~= ""
 
-  panel.render(ui.column({ flexGrow = 1, gap = 14 }, {
-    ui.row({ gap = 8, align = "center", justify = "space_between" }, {
-      ui.row({ gap = 8, align = "center", flexGrow = 1 }, {
-        ui.glyph({ name = "notes", size = 19, color = "primary" }),
-        ui.label({ text = noctalia.tr("title"), fontSize = 16, fontWeight = "bold", color = "on_surface" }),
-      }),
+  panel.render(ui.column({ flexGrow = 1, gap = 10 }, {
+    ui.row({ gap = 4, align = "center" }, {
+      ui.glyph({ name = "notes", size = 19, color = "primary" }),
+      spacePicker(),
       ui.button({
         glyph = "settings",
         variant = "ghost",
@@ -489,16 +535,22 @@ render = function()
     }),
 
     connectionBanner(not connectionHealthy()),
+    ui.label({
+      visible = spaces.state == "error" or spaces.state == "unavailable" or spaces.state == "loading",
+      text = noctalia.tr(if spaces.state == "error" then "spaces.error"
+        elseif spaces.state == "unavailable" then "spaces.unavailable" else "spaces.loading"),
+      color = if spaces.state == "loading" then "on_surface_variant" else "error",
+      fontSize = 11,
+    }),
 
-    ui.column({ gap = 8 }, {
-      ui.label({ text = noctalia.tr("capture.title"), fontWeight = "semibold", color = "on_surface" }),
+    ui.column({ gap = 6 }, {
       ui.input({
         key = "capture-" .. tostring(draftKey),
         value = draft,
         placeholder = noctalia.tr("capture.placeholder"),
         multiline = true,
         submitOnEnter = false,
-        height = 104,
+        height = 84,
         enabled = connected and not sending,
         onChange = function(value)
           draft = if type(value) == "string" then value else ""
@@ -508,28 +560,48 @@ render = function()
           submitMemo(value)
         end,
       }),
-      reminderEditor(),
-      ui.row({ gap = 8, align = "center", justify = "space_between" }, {
+      ui.row({ gap = 6, align = "center" }, {
+        ui.button({
+          glyph = "calendar-clock", variant = "ghost", controlSize = "sm",
+          selected = showReminderEditor or reminderEpoch ~= nil,
+          tooltip = noctalia.tr("reminders.title"),
+          enabled = not sending,
+          onClick = function()
+            showReminderEditor = not showReminderEditor
+            render()
+          end,
+        }),
         ui.label({
-          text = if statusMessage ~= "" then statusMessage else noctalia.tr("capture.hint"),
-          color = if capture.state == "error" then "error" else "on_surface_variant",
-          fontSize = 11,
-          flexGrow = 1,
+          text = noctalia.tr(if spaces.selected == "" then "spaces.private_short" else "spaces.shared_short"),
+          color = "on_surface_variant", fontSize = 11, flexGrow = 1,
         }),
         ui.button({
-          text = noctalia.tr("capture.save"),
+          text = noctalia.tr("capture.save_short"),
           glyph = "send",
           variant = "primary",
+          controlSize = "sm",
+          tooltip = noctalia.tr("capture.shortcut"),
           enabled = canSubmit,
           onClick = function()
             submitMemo(draft)
           end,
         }),
       }),
+      ui.column({ visible = showReminderEditor, gap = 6 }, { reminderEditor() }),
+      ui.label({
+        visible = reminderEpoch ~= nil and not showReminderEditor,
+        text = noctalia.tr("reminders.selected", { time = Reminder.localLabel(reminderEpoch) }),
+        color = "secondary", fontSize = 11,
+      }),
+      ui.label({
+        visible = statusMessage ~= "",
+        text = statusMessage,
+        color = if capture.state == "error" then "error" else "on_surface_variant",
+        fontSize = 11,
+      }),
     }),
 
     ui.separator({ color = "outline/0.45" }),
-    ui.label({ text = noctalia.tr("memos.title"), fontWeight = "semibold", color = "on_surface" }),
     ui.label({
       visible = mutation.state == "error" or mutation.state == "sending",
       text = if mutation.state == "error" then noctalia.tr("crud.errors." .. mutation.error) else noctalia.tr("crud.sending"),
@@ -543,6 +615,13 @@ end
 noctalia.state.watch("connection", function(value)
   if type(value) == "table" then
     connection = value
+    render()
+  end
+end)
+
+noctalia.state.watch("spaces", function(value)
+  if type(value) == "table" then
+    spaces = value
     render()
   end
 end)
@@ -578,6 +657,7 @@ noctalia.state.watch("capture", function(value)
     reminderEpoch = nil
     reminderPreset = ""
     showCustomReminder = false
+    showReminderEditor = false
     customReminderDate = ""
     customReminderTime = ""
     reminderError = ""
@@ -593,6 +673,7 @@ function onOpen(_context)
   connection = noctalia.state.get("connection") or connection
   memos = noctalia.state.get("memos") or memos
   capture = noctalia.state.get("capture") or capture
+  spaces = noctalia.state.get("spaces") or spaces
   view = "main"
   render()
   commandSequence += 1
@@ -682,13 +763,17 @@ submitMemo = function(value)
   if type(value) == "string" then
     draft = value
   end
-  if connection.state ~= "connected" or capture.state == "sending" or noctalia.string.trim(draft) == "" then
+  if connection.state ~= "connected" or not destinationReady() or capture.state == "sending" or noctalia.string.trim(draft) == "" then
     return
   end
   commandSequence += 1
   pendingSequence = commandSequence
+  capture = { state = "sending", sequence = commandSequence }
+  render()
   noctalia.state.set("command", {
     action = "create",
+    space = spaces.selected,
+    scopeRevision = spaces.revision,
     sequence = commandSequence,
     content = draft,
     reminderTime = Reminder.toRfc3339(reminderEpoch),

@@ -47,7 +47,7 @@ chmod 600 ~/.config/noctalia/memos.token
 
 Add the `bar` widget from the bar widget picker. Click it to open the panel. The service validates the token with `GET /api/v1/auth/me`, lists the authenticated user's latest 20 memos, and opens an authenticated `/api/v1/sse` stream. A `memo.changed` event triggers a fresh list request. Reconnect delays increase to 60 seconds; there is no periodic memo polling.
 
-The capture field accepts multiline Markdown. A reminder can be omitted, entered as an exact local date and time, or selected with the `07:00`, `12:00`, `16:00`, and `20:00` shortcuts. A shortcut chooses its next occurrence: if that time has already passed today, it schedules tomorrow. Press **Ctrl+Enter** or click **Save memo**. Every memo created by this version uses `state: NORMAL` and `visibility: PRIVATE`.
+The capture field accepts multiline Markdown. A reminder can be omitted, entered as an exact local date and time, or selected with the `07:00`, `12:00`, `16:00`, and `20:00` shortcuts. A shortcut chooses its next occurrence: if that time has already passed today, it schedules tomorrow. Press **Ctrl+Enter** or click **Save memo**. New memos use `state: NORMAL`. The Space selector in the header controls both the list and the destination for new memos: **Personal** creates private notes without a Space; selecting a Space creates notes shared with its members. The list includes accessible notes from other members, but their edit, pin, and archive actions are disabled. Open reminder options with the calendar button.
 
 Reminder timestamps are stored in Memos' standard `reminderTime` field, so every client sees the same schedule. The Noctalia service fetches the authenticated user's reminders and emits a local Noctalia notification when one becomes due, with a 24-hour catch-up window after sleep or downtime. Memos itself does not send reminder push notifications: each web or mobile client must schedule its own local notification. A future mobile client can therefore reuse the synced timestamp, but reliable mobile background alerts are not provided by this plugin alone.
 
@@ -76,6 +76,7 @@ Run the repository smoke check and Noctalia's offline plugin lint:
 ```sh
 python3 tools/smoke.py
 python3 tools/test_crud.py
+python3 tools/test_spaces.py
 noctalia plugins lint memos
 nix shell nixpkgs#luau --command sh -lc \
   'for file in memos/*.luau memos/lib/*.luau; do luau-compile "$file" >/dev/null || exit 1; done'
@@ -103,4 +104,4 @@ python3 .github/workflows/validate-plugins.py --root .
 
 ## Not in this version
 
-Permanent deletion, attachments, spaces, and launcher integration are not implemented in this release.
+Permanent deletion, attachments, moving notes between Spaces, Space administration, and launcher integration are not implemented in this release.

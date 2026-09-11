@@ -50,12 +50,15 @@
       "not_connected": "Connect to Memos before saving.",
       "request_rejected": "Noctalia could not start the request.",
       "server_error": "The Memos instance rejected the memo.",
-      "unauthorized": "The token is no longer valid."
+      "unauthorized": "The token is no longer valid.",
+      "scope_changed": "Destination changed or is unavailable. Check the picker and try again."
     },
     "hint": "Ctrl+Enter saves · new memos are private",
-    "placeholder": "Write a private memo…",
+    "placeholder": "Write a memo…",
     "save": "Save memo",
-    "saved": "Private memo saved.",
+    "save_short": "Save",
+    "shortcut": "Ctrl+Enter to save",
+    "saved": "Memo saved.",
     "sending": "Saving…",
     "title": "Quick capture"
   },
@@ -139,5 +142,15 @@
   "widget": {
     "label": "Memos",
     "tooltip": "Memos — {status}"
+  },
+  "spaces": {
+    "personal": "Personal",
+    "untitled": "Untitled Space",
+    "unavailable_short": "Unavailable Space",
+    "private_short": "Private",
+    "shared_short": "Shared with Space members",
+    "loading": "Loading Spaces…",
+    "error": "Could not load Spaces. Refresh to retry.",
+    "unavailable": "Space unavailable. Choose another destination."
   }
 }

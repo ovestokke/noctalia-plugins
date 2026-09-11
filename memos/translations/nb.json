@@ -50,12 +50,15 @@
       "not_connected": "Koble til Memos før du lagrer.",
       "request_rejected": "Noctalia kunne ikke starte forespørselen.",
       "server_error": "Memos-instansen avviste notatet.",
-      "unauthorized": "Tokenet er ikke lenger gyldig."
+      "unauthorized": "Tokenet er ikke lenger gyldig.",
+      "scope_changed": "Målet er endret eller utilgjengelig. Kontroller valget og prøv igjen."
     },
     "hint": "Ctrl+Enter lagrer · nye notater er private",
-    "placeholder": "Skriv et privat notat…",
+    "placeholder": "Skriv et notat…",
     "save": "Lagre notat",
-    "saved": "Privat notat lagret.",
+    "save_short": "Lagre",
+    "shortcut": "Ctrl+Enter for å lagre",
+    "saved": "Notat lagret.",
     "sending": "Lagrer…",
     "title": "Hurtignotat"
   },
@@ -139,5 +142,15 @@
   "widget": {
     "label": "Memos",
     "tooltip": "Memos — {status}"
+  },
+  "spaces": {
+    "personal": "Personlig",
+    "untitled": "Space uten navn",
+    "unavailable_short": "Utilgjengelig Space",
+    "private_short": "Privat",
+    "shared_short": "Delt med Space-medlemmer",
+    "loading": "Laster Spaces…",
+    "error": "Kunne ikke laste Spaces. Oppdater for å prøve igjen.",
+    "unavailable": "Space er utilgjengelig. Velg et annet mål."
   }
 }

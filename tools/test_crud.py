@@ -13,6 +13,7 @@ handler = source.split("local mutationInFlight = false", 1)[1].split("local func
 handler = 'local mutationInFlight = false\n' + handler
 preamble = r'''
 local connected, client = true, {}
+local editableMemos = {["memos/abc-123"] = true}
 local state, request, callback, encoded
 local requests, refreshes = 0, 0
 local accept, encode = true, true
@@ -91,6 +92,8 @@ mutateMemo({action = 'pin', name = 'memos/abc-123'})
 assert(state.error == 'invalid_memo' and requests == before)
 mutateMemo({action = 'delete', name = 'memos/abc-123'})
 assert(state.error == 'invalid_memo' and requests == before)
+mutateMemo({action = 'archive', name = 'memos/other-author'})
+assert(state.error == 'forbidden' and requests == before)
 print('Memo action tests passed.')
 '''
 subprocess.run(['lua', '-'], input=preamble + handler + tests, text=True, check=True)

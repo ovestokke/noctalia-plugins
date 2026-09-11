@@ -2,6 +2,13 @@
 
 local Client = require("./lib/client.luau")
 local Reminder = require("./lib/reminder.luau")
+local Space = require("./lib/space.luau")
+local spaces = {}
+local selectedSpace = ""
+local scopeRevision = 0
+local spacesGeneration = 0
+local spacesReady = false
+local editableMemos = {}
 
 local RECONNECT_DELAYS = { 1, 2, 4, 8, 16, 30, 60 }
 local client = nil
@@ -140,8 +147,22 @@ end
 local fetchMemos
 local fetchReminders
 local startStream
+local fetchSpaces
+
+local function publishSpaces(state)
+  noctalia.state.set("spaces", { items = spaces, selected = selectedSpace, revision = scopeRevision, state = state })
+end
+
+local function invalidateScope()
+  scopeRevision += 1
+  fetchInFlight = false
+  fetchAgain = false
+  editableMemos = {}
+  noctalia.state.set("memos", {})
+end
 
 fetchMemos = function()
+  if selectedSpace ~= "" and (not spacesReady or not Space.contains(spaces, selectedSpace)) then return end
   if not connected or client == nil or currentUserName == "" then
     return
   end
@@ -152,13 +173,16 @@ fetchMemos = function()
 
   fetchInFlight = true
   fetchAgain = false
-  local filter = `creator == "{currentUserName}"`
+  local requestClient = client
+  local requestRevision = scopeRevision
+  local filter = Space.filter(currentUserName, selectedSpace)
   local path = "/api/v1/memos?pageSize=20&state=NORMAL&orderBy="
     .. noctalia.string.urlEncode("pinned desc, create_time desc")
     .. "&filter="
     .. noctalia.string.urlEncode(filter)
 
   local accepted = Client.request(client, "GET", path, nil, function(response)
+    if client ~= requestClient or scopeRevision ~= requestRevision or not connected then return end
     fetchInFlight = false
     local statusError = Client.statusError(response)
     if statusError ~= nil then
@@ -177,9 +201,13 @@ fetchMemos = function()
     end
 
     local memos = {}
+    editableMemos = {}
     for _, memo in ipairs(payload.memos) do
       if type(memo) == "table" then
+        local canEdit = memo.creator == currentUserName
+        if canEdit and type(memo.name) == "string" then editableMemos[memo.name] = true end
         table.insert(memos, {
+          canEdit = canEdit,
           name = if type(memo.name) == "string" then memo.name else "",
           content = if type(memo.content) == "string" then memo.content else "",
           createTime = if type(memo.createTime) == "string" then memo.createTime else "",
@@ -201,6 +229,51 @@ fetchMemos = function()
     fetchInFlight = false
     publishConnection("request_rejected", "disconnected")
   end
+end
+
+fetchSpaces = function()
+  if not connected or client == nil then return end
+  spacesGeneration += 1
+  local generation = spacesGeneration
+  local requestClient = client
+  local collected = {}
+  spacesReady = false
+  publishSpaces("loading")
+  local fetchPage
+  local function fail()
+    spacesReady = false
+    invalidateScope()
+    publishSpaces("error")
+  end
+  fetchPage = function(token)
+    local path = "/api/v1/spaces?pageSize=1000"
+    if token ~= "" then path ..= "&pageToken=" .. noctalia.string.urlEncode(token) end
+    local accepted = Client.request(requestClient, "GET", path, nil, function(response)
+      if client ~= requestClient or generation ~= spacesGeneration or not connected then return end
+      if Client.statusError(response) ~= nil then fail(); return end
+      local payload = Client.decodeObject(response.body)
+      if payload == nil or type(payload.spaces) ~= "table" then fail(); return end
+      for _, space in ipairs(payload.spaces) do
+        if Space.accessible(space) then table.insert(collected, space) end
+      end
+      if type(payload.nextPageToken) == "string" and payload.nextPageToken ~= "" then
+        fetchPage(payload.nextPageToken)
+        return
+      end
+      spaces = collected
+      spacesReady = true
+      -- Never silently redirect a draft when membership disappears.
+      if not Space.contains(spaces, selectedSpace) then
+        invalidateScope()
+        publishSpaces("unavailable")
+        return
+      end
+      publishSpaces("ready")
+      fetchMemos()
+    end)
+    if not accepted then fail() end
+  end
+  fetchPage("")
 end
 
 fetchReminders = function()
@@ -302,6 +375,7 @@ startStream = function()
       publishConnection("connected", "connected")
       fetchMemos()
       fetchReminders()
+      fetchSpaces()
       return
     elseif line == ": heartbeat" then
       reconnectAttempt = 0
@@ -314,6 +388,9 @@ startStream = function()
 
     local payload = noctalia.string.trim(string.sub(line, 6))
     local event = noctalia.json.decode(payload)
+    if type(event) == "table" and event.type == "space.changed" then
+      fetchSpaces()
+    end
     if type(event) == "table" and event.type == "memo.changed" then
       fetchMemos()
       fetchReminders()
@@ -343,6 +420,12 @@ local function validateConnection()
   end
 
   stopStream()
+  invalidateScope()
+  spacesGeneration += 1
+  spaces = {}
+  -- Keep the destination across reconnects; never redirect an existing draft.
+  spacesReady = false
+  publishSpaces("loading")
   client = nil
   connected = false
   currentUserName = ""
@@ -386,6 +469,7 @@ local function validateConnection()
     connected = true
     publishConnection("connected", "connecting")
     fetchMemos()
+    fetchSpaces()
     fetchReminders()
     startStream()
   end)
@@ -396,7 +480,7 @@ local function validateConnection()
   end
 end
 
-local function createMemo(sequence, content, reminderTime)
+local function createMemo(sequence, content, reminderTime, destination, revision)
   if not connected or client == nil then
     publishCapture("error", sequence, "not_connected")
     return
@@ -406,11 +490,18 @@ local function createMemo(sequence, content, reminderTime)
     return
   end
 
+  if destination ~= selectedSpace or revision ~= scopeRevision
+    or not Space.contains(spaces, destination) or (destination ~= "" and not spacesReady) then
+    publishCapture("error", sequence, "scope_changed")
+    return
+  end
+
   local memo = {
     content = content,
     state = "NORMAL",
     visibility = "PRIVATE",
   }
+  Space.destination(memo, destination)
   if type(reminderTime) == "string" and Reminder.fromRfc3339(reminderTime) ~= nil then
     memo.reminderTime = reminderTime
   end
@@ -420,8 +511,13 @@ local function createMemo(sequence, content, reminderTime)
     return
   end
 
+  local requestClient = client
   publishCapture("sending", sequence)
-  local accepted = Client.request(client, "POST", "/api/v1/memos", body, function(response)
+  local accepted = Client.request(requestClient, "POST", "/api/v1/memos", body, function(response)
+    if client ~= requestClient then
+      publishCapture("error", sequence, "not_connected")
+      return
+    end
     local statusError = Client.statusError(response)
     if statusError ~= nil then
       publishCapture("error", sequence, statusError)
@@ -463,6 +559,10 @@ local function mutateMemo(command)
   end
   if type(command.name) ~= "string" or string.match(command.name, "^memos/[%w_-]+$") == nil then
     publish("error", "invalid_memo")
+    return
+  end
+  if not editableMemos[command.name] then
+    publish("error", "forbidden")
     return
   end
   local path = "/api/v1/" .. command.name
@@ -526,8 +626,17 @@ local function handleCommand(command)
     if connected then
       fetchMemos()
       fetchReminders()
+      fetchSpaces()
     else
       validateConnection()
+    end
+  elseif command.action == "select_space" then
+    if connected and type(command.space) == "string" and Space.contains(spaces, command.space)
+      and (command.space == "" or spacesReady) then
+      selectedSpace = command.space
+      invalidateScope()
+      publishSpaces("ready")
+      fetchMemos()
     end
   elseif command.action == "credentials_changed" then
     validateConnection()
@@ -539,7 +648,7 @@ local function handleCommand(command)
     local content = command.content
     local reminderTime = command.reminderTime
     noctalia.state.set("command", { action = "ack", sequence = sequence })
-    createMemo(sequence, content, reminderTime)
+    createMemo(sequence, content, reminderTime, command.space, command.scopeRevision)
   end
 end
 
