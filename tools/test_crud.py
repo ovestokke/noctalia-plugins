@@ -12,8 +12,9 @@ source = (ROOT / "memos/service.luau").read_text()
 handler = source.split("local mutationInFlight = false", 1)[1].split("local function handleCommand", 1)[0]
 handler = 'local mutationInFlight = false\n' + handler
 preamble = r'''
-local connected, client = true, {}
-local editableMemos = {["memos/abc-123"] = true}
+local connected, client, currentUserName = true, {}, 'users/me'
+local Task = dofile('memos/lib/task.luau')
+local editableMemos = {["memos/abc-123"] = 'old text'}
 local state, request, callback, encoded
 local requests, refreshes = 0, 0
 local accept, encode = true, true
@@ -34,6 +35,7 @@ local Client = {
     if response.status == 403 then return 'forbidden' end
     if response.status >= 300 then return 'server_error' end
   end,
+  decodeObject = function(body) if type(body) == 'table' then return body end end,
 }
 local function setConnectionFailure() connected = false end
 local function fetchMemos() refreshes = refreshes + 1 end
@@ -94,6 +96,62 @@ mutateMemo({action = 'delete', name = 'memos/abc-123'})
 assert(state.error == 'invalid_memo' and requests == before)
 mutateMemo({action = 'archive', name = 'memos/other-author'})
 assert(state.error == 'forbidden' and requests == before)
+
+local base = '- [ ] first\r\n- [X] second\r\n'
+editableMemos['memos/abc-123'] = base
+local task = Task.find(base)[1]
+local toggleBefore = requests
+mutateMemo({
+  action = 'toggle_task', sequence = 10, name = 'memos/abc-123', baseContent = base,
+  markerStart = task.markerStart, markerEnd = task.markerEnd, line = task.line,
+  previousChecked = task.checked, checked = true,
+})
+assert(requests == toggleBefore + 1)
+assert(request.method == 'GET' and request.path == '/api/v1/memos/abc-123')
+callback({ok = true, status = 200, body = {content = base, creator = 'users/me', state = 'NORMAL'}})
+assert(requests == toggleBefore + 2)
+assert(request.method == 'PATCH')
+assert(request.path == '/api/v1/memos/abc-123?updateMask=content,update_time')
+assert(encoded.content == '- [x] first\r\n- [X] second\r\n' and encoded.name == nil)
+callback({ok = true, status = 200, body = {content = encoded.content}})
+assert(state.state == 'success')
+
+mutateMemo({
+  action = 'toggle_task', sequence = 11, name = 'memos/abc-123', baseContent = base,
+  markerStart = task.markerStart, markerEnd = task.markerEnd, line = task.line,
+  previousChecked = task.checked, checked = false,
+})
+assert(state.state == 'success' and requests == toggleBefore + 2)
+
+mutateMemo({
+  action = 'toggle_task', sequence = 12, name = 'memos/abc-123', baseContent = '- [ ] stale',
+  markerStart = 4, markerEnd = 5, line = 0, previousChecked = false, checked = true,
+})
+assert(state.error == 'conflict' and requests == toggleBefore + 2)
+
+mutateMemo({
+  action = 'toggle_task', sequence = 13, name = 'memos/abc-123', baseContent = base,
+  markerStart = task.markerStart + 1, markerEnd = task.markerEnd + 1, line = task.line,
+  previousChecked = task.checked, checked = true,
+})
+assert(state.error == 'invalid_task' and requests == toggleBefore + 2)
+
+mutateMemo({
+  action = 'toggle_task', sequence = 14, name = 'memos/abc-123', baseContent = base,
+  markerStart = task.markerStart, markerEnd = task.markerEnd, line = task.line,
+  previousChecked = task.checked, checked = true,
+})
+assert(request.method == 'GET')
+callback({ok = true, status = 200, body = {content = '- [ ] changed elsewhere\n', creator = 'users/me', state = 'NORMAL'}})
+assert(state.error == 'conflict' and requests == toggleBefore + 3)
+
+mutateMemo({
+  action = 'toggle_task', sequence = 15, name = 'memos/abc-123', baseContent = base,
+  markerStart = task.markerStart, markerEnd = task.markerEnd, line = task.line,
+  previousChecked = task.checked, checked = true,
+})
+callback({ok = true, status = 200, body = {content = base, creator = 'users/me', state = 'ARCHIVED'}})
+assert(state.error == 'conflict' and requests == toggleBefore + 4)
 print('Memo action tests passed.')
 '''
-subprocess.run(['lua', '-'], input=preamble + handler + tests, text=True, check=True)
+subprocess.run(['lua', '-'], input=preamble + handler + tests, text=True, cwd=ROOT, check=True)

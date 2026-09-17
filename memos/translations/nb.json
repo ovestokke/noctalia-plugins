@@ -16,6 +16,8 @@
     "errors": {
       "empty_memo": "Skriv noe før du lagrer.",
       "invalid_memo": "Notatet har en ugyldig identifikator.",
+      "invalid_task": "Avkrysningsboksen er ikke lenger tilgjengelig. Oppdater og prøv igjen.",
+      "conflict": "Notatet er endret et annet sted. Oppdater før du endrer avkrysningsboksen.",
       "encode_failed": "Kunne ikke klargjøre notatet.",
       "forbidden": "Du har ikke tilgang til å endre dette notatet.",
       "network_error": "Kunne ikke nå Memos. Endringene dine er beholdt.",
@@ -127,6 +129,10 @@
     "token_storage_unavailable": "Noctalias datamappe for programtillegget er utilgjengelig.",
     "unauthorized": "Tilgangstokenet er ugyldig eller utløpt.",
     "unconfigured": "Konfigurer adressen til Memos-instansen."
+  },
+  "tasks": {
+    "mark_complete": "Merk oppgaven som fullført",
+    "mark_incomplete": "Merk oppgaven som ufullført"
   },
   "time": {
     "timestamp": "{date} {time}"

@@ -3,6 +3,7 @@
 local Client = require("./lib/client.luau")
 local Reminder = require("./lib/reminder.luau")
 local Space = require("./lib/space.luau")
+local Task = require("./lib/task.luau")
 local spaces = {}
 local selectedSpace = ""
 local scopeRevision = 0
@@ -205,11 +206,15 @@ fetchMemos = function()
     for _, memo in ipairs(payload.memos) do
       if type(memo) == "table" then
         local canEdit = memo.creator == currentUserName
-        if canEdit and type(memo.name) == "string" then editableMemos[memo.name] = true end
+        local memoName = ""
+        local content = ""
+        if type(memo.name) == "string" then memoName = memo.name end
+        if type(memo.content) == "string" then content = memo.content end
+        if canEdit and memoName ~= "" then editableMemos[memoName] = content end
         table.insert(memos, {
           canEdit = canEdit,
-          name = if type(memo.name) == "string" then memo.name else "",
-          content = if type(memo.content) == "string" then memo.content else "",
+          name = memoName,
+          content = content,
           createTime = if type(memo.createTime) == "string" then memo.createTime else "",
           visibility = if type(memo.visibility) == "string" then memo.visibility else "",
           pinned = memo.pinned == true,
@@ -559,6 +564,93 @@ local function mutateMemo(command)
     return
   end
   local path = "/api/v1/" .. command.name
+  if command.action == "toggle_task" then
+    if type(command.baseContent) ~= "string" or editableMemos[command.name] ~= command.baseContent then
+      publish("error", "conflict")
+      return
+    end
+    local content, taskError = Task.replaceMarker(command.baseContent, {
+      markerStart = command.markerStart,
+      markerEnd = command.markerEnd,
+      line = command.line,
+      checked = command.previousChecked,
+    }, command.checked)
+    if content == nil then
+      publish("error", taskError or "invalid_task")
+      return
+    end
+    if content == command.baseContent then
+      publish("success")
+      return
+    end
+    local body = noctalia.json.encode({ content = content })
+    if body == nil then
+      publish("error", "encode_failed")
+      return
+    end
+
+    local requestClient = client
+    local function fail(errorCode, response)
+      mutationInFlight = false
+      publish("error", errorCode)
+      if response ~= nil and (errorCode == "unauthorized" or errorCode == "forbidden") then
+        setConnectionFailure(errorCode, response.status)
+      end
+    end
+    local function succeed()
+      mutationInFlight = false
+      publish("success")
+      fetchMemos()
+      fetchReminders()
+    end
+    local function verifyRemote()
+      local verifyAccepted = Client.request(requestClient, "GET", path, nil, function(verifyResponse)
+        if client ~= requestClient then fail("not_connected"); return end
+        local verifyError = Client.statusError(verifyResponse)
+        if verifyError ~= nil then fail(verifyError, verifyResponse); return end
+        local remote = Client.decodeObject(verifyResponse.body)
+        if remote == nil or remote.content ~= content then fail("conflict"); return end
+        succeed()
+      end)
+      if not verifyAccepted then fail("request_rejected") end
+    end
+
+    mutationInFlight = true
+    publish("sending")
+    local readAccepted = Client.request(requestClient, "GET", path, nil, function(readResponse)
+      if client ~= requestClient then fail("not_connected"); return end
+      local readError = Client.statusError(readResponse)
+      if readError ~= nil then fail(readError, readResponse); return end
+      local remote = Client.decodeObject(readResponse.body)
+      if remote == nil or remote.content ~= command.baseContent or remote.state ~= "NORMAL" then
+        fail("conflict")
+        return
+      end
+      if remote.creator ~= currentUserName then fail("forbidden"); return end
+
+      local patchAccepted = Client.request(
+        requestClient,
+        "PATCH",
+        path .. "?updateMask=content,update_time",
+        body,
+        function(patchResponse)
+          if client ~= requestClient then fail("not_connected"); return end
+          local patchError = Client.statusError(patchResponse)
+          if patchError ~= nil then fail(patchError, patchResponse); return end
+          local patched = Client.decodeObject(patchResponse.body)
+          if patched ~= nil and type(patched.content) == "string" then
+            if patched.content ~= content then fail("conflict") else succeed() end
+            return
+          end
+          verifyRemote()
+        end
+      )
+      if not patchAccepted then fail("request_rejected") end
+    end)
+    if not readAccepted then fail("request_rejected") end
+    return
+  end
+
   local fields = { name = command.name }
   local mask
   if command.action == "update" then
@@ -632,7 +724,9 @@ local function handleCommand(command)
     end
   elseif command.action == "credentials_changed" then
     validateConnection()
-  elseif command.action == "update" or command.action == "pin" or command.action == "archive" then
+  elseif command.action == "update" or command.action == "toggle_task"
+    or command.action == "pin" or command.action == "archive"
+  then
     noctalia.state.set("command", { action = "ack", sequence = command.sequence })
     mutateMemo(command)
   elseif command.action == "create" then

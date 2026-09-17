@@ -2,6 +2,7 @@
 
 local Format = require("./lib/format.luau")
 local Reminder = require("./lib/reminder.luau")
+local Task = require("./lib/task.luau")
 
 local connection = noctalia.state.get("connection") or {
   state = "unconfigured",
@@ -37,6 +38,7 @@ local credentialError = ""
 local render: () -> ()
 local saveCredential: (any) -> ()
 local submitMemo: (any) -> ()
+local submitTaskToggle: (any, any, boolean) -> ()
 
 local function connectionText()
   if connection.state ~= "connected" then
@@ -352,6 +354,34 @@ local function submitMutation(action, name, pinned)
   })
 end
 
+submitTaskToggle = function(memo, task, checked)
+  if mutation.state == "sending" or connection.state ~= "connected" or editingName ~= nil
+    or memo.canEdit ~= true or type(memo.name) ~= "string" or memo.name == ""
+  then
+    return
+  end
+  local updated = Task.replaceMarker(memo.content, task, checked)
+  if updated == nil or updated == memo.content then
+    return
+  end
+
+  commandSequence += 1
+  pendingMutation = commandSequence
+  mutation = { state = "sending", error = "" }
+  render()
+  noctalia.state.set("command", {
+    action = "toggle_task",
+    name = memo.name,
+    baseContent = memo.content,
+    markerStart = task.markerStart,
+    markerEnd = task.markerEnd,
+    line = task.line,
+    previousChecked = task.checked,
+    checked = checked,
+    sequence = commandSequence,
+  })
+end
+
 local function memoActions(memo)
   local busy = mutation.state == "sending"
   local canAct = memo.canEdit == true and not busy and connection.state == "connected" and memo.name ~= "" and editingName == nil
@@ -407,6 +437,81 @@ local function memoActions(memo)
   })
 end
 
+local function appendMarkdown(nodes, text, key)
+  if type(text) ~= "string" or noctalia.string.trim(text) == "" then
+    return
+  end
+  for index, fragment in ipairs(Task.renderFragments(text)) do
+    local fragmentKey = key .. "-" .. tostring(index)
+    if fragment.indent > 0 then
+      table.insert(nodes, ui.row({ key = fragmentKey, gap = 4, align = "start" }, {
+        ui.spacer({ width = math.min(fragment.indent * 6, 48) }),
+        ui.markdown({ text = fragment.text, flexGrow = 1 }),
+      }))
+    else
+      table.insert(nodes, ui.markdown({ key = fragmentKey, text = fragment.text }))
+    end
+  end
+end
+
+local function quoteMarkdown(text, depth)
+  if depth == nil or depth <= 0 then
+    return text
+  end
+  local prefix = string.rep("> ", depth)
+  return prefix .. string.gsub(text, "\n", "\n" .. prefix)
+end
+
+local function memoContent(memo, content)
+  local tasks = Task.find(content)
+  if #tasks == 0 then
+    return ui.markdown({ visible = editingName ~= memo.name, text = content })
+  end
+
+  local nodes = {}
+  local cursor = 1
+  local canToggle = memo.canEdit == true and mutation.state ~= "sending"
+    and connection.state == "connected" and editingName == nil and memo.name ~= ""
+  for index, task in ipairs(tasks) do
+    appendMarkdown(nodes, string.sub(content, cursor, task.lineStart - 1), "task-before-" .. tostring(index))
+    local taskNodes = {}
+    if task.indent > 0 then
+      table.insert(taskNodes, ui.spacer({ width = math.min(task.indent * 6, 48) }))
+    end
+    table.insert(taskNodes, ui.button({
+      key = "task-toggle-" .. tostring(task.markerStart),
+      glyph = if task.checked then "square-check" else "square",
+      variant = "ghost",
+      controlSize = "sm",
+      selected = task.checked,
+      enabled = canToggle,
+      tooltip = noctalia.tr(if task.checked then "tasks.mark_incomplete" else "tasks.mark_complete"),
+      onClick = function()
+        submitTaskToggle(memo, task, not task.checked)
+      end,
+    }))
+    local bodyNodes = {}
+    if task.text ~= "" then
+      table.insert(bodyNodes, ui.markdown({ text = quoteMarkdown(task.text, task.quoteDepth) }))
+    end
+    if task.continuationText ~= "" then
+      table.insert(bodyNodes, ui.markdown({ text = quoteMarkdown(task.continuationText, task.quoteDepth) }))
+    end
+    if #bodyNodes > 0 then
+      table.insert(taskNodes, ui.column({ flexGrow = 1, gap = 2 }, bodyNodes))
+    end
+    table.insert(nodes, ui.row({
+      key = "task-row-" .. tostring(task.markerStart),
+      gap = 4,
+      align = "start",
+      minHeight = 32,
+    }, taskNodes))
+    cursor = task.continuationEnd
+  end
+  appendMarkdown(nodes, string.sub(content, cursor), "task-after")
+  return ui.column({ visible = editingName ~= memo.name, gap = 2 }, nodes)
+end
+
 local function memoRows()
   local rows = {}
   if #memos == 0 then
@@ -449,7 +554,7 @@ local function memoRows()
         color = "secondary",
         fontSize = 11,
       }),
-      ui.markdown({ visible = editingName ~= memo.name, text = content }),
+      memoContent(memo, content),
       memoActions(memo),
     }))
   end

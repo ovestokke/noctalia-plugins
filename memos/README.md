@@ -65,6 +65,8 @@ noctalia msg plugin ovestokke/memos:service all validate
 
 Each memo has icon buttons to pin or unpin, edit its content, and archive it. Pinned memos appear first. Archiving removes a memo from this list without permanently deleting it. Editing preserves its visibility and reminder.
 
+Markdown task-list items such as `- [ ] Follow up` and `1. [x] Done` render as checkboxes. Nested tasks and ordered lists are supported. Everyone can see task state, while only the memo owner can toggle it. A toggle changes only the source marker (` `, `x`, or `X`) and sends a content-only update; line endings, Unicode, indentation, and the rest of the Markdown source remain unchanged. Task-looking text in prose or code blocks is not interactive.
+
 ## Settings
 
 `instance_url` and the optional `token_file` override are plugin-level Noctalia settings. The panel's settings view manages the personal access token separately so it never enters Noctalia's TOML configuration. Noctalia restarts the service when either manifest setting changes.
@@ -77,13 +79,15 @@ Run the repository smoke check and Noctalia's offline plugin lint:
 python3 tools/smoke.py
 python3 tools/test_crud.py
 python3 tools/test_spaces.py
+python3 tools/test_tasks.py
 noctalia plugins lint memos
 nix shell nixpkgs#luau --command sh -lc \
   'for file in memos/*.luau memos/lib/*.luau; do luau-compile "$file" >/dev/null || exit 1; done'
 nix shell nixpkgs#luau-lsp --command luau-lsp analyze \
   --definitions noctalia.d.luau --base-luaurc .luaurc --platform standard \
   memos/bar.luau memos/panel.luau memos/service.luau \
-  memos/lib/client.luau memos/lib/format.luau memos/lib/reminder.luau
+  memos/lib/client.luau memos/lib/format.luau memos/lib/reminder.luau \
+  memos/lib/task.luau
 ```
 
 Run the vendored official publication validator:

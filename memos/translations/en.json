@@ -16,6 +16,8 @@
     "errors": {
       "empty_memo": "Write something before saving.",
       "invalid_memo": "This memo has an invalid identifier.",
+      "invalid_task": "That checkbox is no longer available. Refresh and try again.",
+      "conflict": "This memo changed elsewhere. Refresh before toggling the checkbox.",
       "encode_failed": "Could not prepare the memo.",
       "forbidden": "You do not have permission to change this memo.",
       "network_error": "Could not reach Memos. Your edits are retained.",
@@ -127,6 +129,10 @@
     "token_storage_unavailable": "Noctalia's plugin data directory is unavailable.",
     "unauthorized": "The personal access token is invalid or expired.",
     "unconfigured": "Configure the Memos instance URL."
+  },
+  "tasks": {
+    "mark_complete": "Mark task complete",
+    "mark_incomplete": "Mark task incomplete"
   },
   "time": {
     "timestamp": "{date} {time}"
