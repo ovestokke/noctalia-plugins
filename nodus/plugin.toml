@@ -1,0 +1,28 @@
+id = "ovestokke/nodus"
+name = "Nodus"
+version = "0.1.0"
+plugin_api = 24
+author = "ovestokke"
+license = "MIT"
+dependencies = []
+tags = ["bar", "panel", "productivity", "service"]
+icon = "notes"
+description = "Read and capture Nodus notes from Noctalia."
+
+[[widget]]
+id = "bar"
+entry = "bar.luau"
+
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 460
+height = 620
+placement = "attached"
+position = "auto"
+open_near_click = true
+keyboard_focus = "on_demand"
+
+[[service]]
+id = "service"
+entry = "service.luau"

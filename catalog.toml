@@ -10,3 +10,16 @@ deprecated = false
 plugin_api = 22
 tags = ["bar", "panel", "productivity", "service"]
 dependencies = []
+
+[[plugin]]
+id = "ovestokke/nodus"
+name = "Nodus"
+version = "0.1.0"
+author = "ovestokke"
+license = "MIT"
+icon = "notes"
+description = "Read and capture Nodus notes from Noctalia."
+deprecated = false
+plugin_api = 24
+tags = ["bar", "panel", "productivity", "service"]
+dependencies = []

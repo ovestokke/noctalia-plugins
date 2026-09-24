@@ -32,9 +32,10 @@ def main() -> int:
     if manifest.get("plugin_api") != 22:
         fail("plugin_api must stay at 22")
     catalog_plugins = catalog.get("plugin", [])
-    if len(catalog_plugins) != 1:
-        fail("catalog must index exactly one plugin")
-    catalog_plugin = catalog_plugins[0]
+    catalog_by_id = {entry.get("id"): entry for entry in catalog_plugins}
+    if len(catalog_by_id) != len(catalog_plugins) or set(catalog_by_id) != {"ovestokke/memos", "ovestokke/nodus"}:
+        fail("catalog must index Memos and Nodus once each")
+    catalog_plugin = catalog_by_id["ovestokke/memos"]
     for field in (
         "id",
         "name",
@@ -49,6 +50,15 @@ def main() -> int:
     ):
         if catalog_plugin.get(field) != manifest.get(field):
             fail(f"catalog and manifest field differs: {field}")
+
+    nodus = load_toml(ROOT / "nodus" / "plugin.toml")
+    for field in ("id", "name", "version", "author", "license", "icon", "description", "plugin_api", "tags", "dependencies"):
+        if catalog_by_id["ovestokke/nodus"].get(field) != nodus.get(field):
+            fail(f"Nodus catalog and manifest field differs: {field}")
+    for kind in ("widget", "panel", "service"):
+        for entry in nodus.get(kind, []):
+            if not (ROOT / "nodus" / entry["entry"]).is_file():
+                fail(f"missing Nodus {kind} entry")
 
     entries = []
     for kind in ("widget", "panel", "service"):

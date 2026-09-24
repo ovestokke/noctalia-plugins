@@ -7,6 +7,7 @@ Noctalia v5 plugins maintained by Ove Stokke.
 | Plugin | Description |
 | --- | --- |
 | [`ovestokke/memos`](memos/) | Capture private Memos notes, browse recent notes, and receive synchronized reminders. |
+| [`ovestokke/nodus`](nodus/) | Experimental Linux client for Nodus notes and checklists. Requires a separately built helper; not production-ready. |
 
 ## Install
 
@@ -35,6 +36,8 @@ Add the repository root as a path source:
 ```sh
 noctalia msg plugins source add ovestokke-dev path /path/to/noctalia-plugins
 noctalia msg plugins enable ovestokke/memos
+# After building and pairing the Nodus helper (see nodus/README.md):
+noctalia msg plugins enable ovestokke/nodus
 ```
 
 Noctalia expects `catalog.toml` at the repository root and each plugin in its own subdirectory.
