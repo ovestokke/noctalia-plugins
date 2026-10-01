@@ -337,26 +337,51 @@ func terminalCode() string {
 	defer f.Close()
 	var old syscall.Termios
 	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TCGETS), uintptr(unsafe.Pointer(&old))); errno != 0 {
-		die("Cannot protect pairing code input")
+		die("Cannot configure pairing code input")
 	}
 	term := old
-	term.Lflag &^= syscall.ECHO
+	term.Lflag |= syscall.ECHO
 	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TCSETS), uintptr(unsafe.Pointer(&term))); errno != 0 {
-		die("Cannot disable terminal echo")
+		die("Cannot enable terminal echo")
 	}
 	defer syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TCSETS), uintptr(unsafe.Pointer(&old)))
 	fmt.Fprint(f, "Pairing code: ")
 	raw := make([]byte, 0, 32)
+	tooLong := false
 	one := make([]byte, 1)
-	for len(raw) < 32 {
+	for {
 		n, e := f.Read(one)
-		if e != nil || n == 0 || one[0] == '\n' || one[0] == '\r' {
+		if e != nil || n == 0 {
+			die("Pairing cancelled")
+		}
+		if one[0] == '\n' || one[0] == '\r' {
 			break
 		}
-		raw = append(raw, one[0])
+		// Drain the whole line so a long paste cannot become a second attempt.
+		if len(raw) < 32 {
+			raw = append(raw, one[0])
+		} else {
+			tooLong = true
+		}
 	}
 	fmt.Fprintln(f)
+	if tooLong {
+		return ""
+	}
 	return strings.TrimSpace(string(raw))
+}
+
+func normalizePairingCode(raw string) (string, bool) {
+	code := strings.ToUpper(strings.TrimSpace(raw))
+	if len(code) != 11 || code[5] != '-' {
+		return "", false
+	}
+	for i, c := range code {
+		if i != 5 && !strings.ContainsRune("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", c) {
+			return "", false
+		}
+	}
+	return code, true
 }
 
 var transport = &http.Client{Timeout: 20 * time.Second, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
@@ -431,35 +456,53 @@ func pair(raw string) {
 			die("Protected pending pairing needs manual recovery")
 		}
 		fmt.Fprintln(os.Stderr, "Retrying the original pairing redemption")
-	} else {
-		code := terminalCode()
-		if code == "" {
-			die("Pairing code is empty")
-		}
-		b := make([]byte, 32)
-		if _, err = rand.Read(b); err != nil {
-			die("Random source unavailable")
-		}
-		pair = pendingPair{Code: code, DeviceID: id("dev_"), RequestID: id("req_"), Secret: base64.RawURLEncoding.EncodeToString(b)}
-		enc, _ := json.Marshal(pair)
-		if _, err = secret("store", "pending", target, string(enc)); err != nil {
-			die(err.Error())
-		}
 	}
-	body, _ := json.Marshal(pair)
 	p := profile{Origin: target}
-	status, b, err := request(p, "", "POST", "/auth/pairings/redeem", body)
-	if err != nil {
-		die("Pairing outcome unknown; run pair with the same origin to retry exactly")
-	}
-	if status != 200 {
-		die("Pairing was rejected or temporarily unavailable (HTTP " + fmt.Sprint(status) + "); pending evidence retained")
+	var receipt []byte
+	for {
+		if pair.Code == "" {
+			code, valid := normalizePairingCode(terminalCode())
+			if !valid {
+				fmt.Fprintln(os.Stderr, "Incorrect code. Try again.")
+				continue
+			}
+			b := make([]byte, 32)
+			if _, err = rand.Read(b); err != nil {
+				die("Random source unavailable")
+			}
+			pair = pendingPair{Code: code, DeviceID: id("dev_"), RequestID: id("req_"), Secret: base64.RawURLEncoding.EncodeToString(b)}
+			enc, _ := json.Marshal(pair)
+			if _, err = secret("store", "pending", target, string(enc)); err != nil {
+				die(err.Error())
+			}
+		}
+		body, _ := json.Marshal(pair)
+		status, b, err := request(p, "", "POST", "/auth/pairings/redeem", body)
+		if err != nil {
+			die("Pairing outcome unknown; use Pair device again with the same server to retry")
+		}
+		var failure apiError
+		if status == http.StatusBadRequest || (status == http.StatusUnauthorized &&
+			json.Unmarshal(b, &failure) == nil && failure.Code == "invalid_pairing") {
+			// These responses prove rejection. Unknown outcomes must keep the exact tuple.
+			if _, err = secret("clear", "pending", target, ""); err != nil {
+				die("Incorrect code; unlock Secret Service before trying again")
+			}
+			pair = pendingPair{}
+			fmt.Fprintln(os.Stderr, "Incorrect code. Try again.")
+			continue
+		}
+		if status != http.StatusOK {
+			die("Pairing was rejected or temporarily unavailable (HTTP " + fmt.Sprint(status) + "); pending evidence retained")
+		}
+		receipt = b
+		break
 	}
 	var redeemed struct {
 		Credential string `json:"credential"`
 		TokenID    string `json:"tokenId"`
 	}
-	if json.Unmarshal(b, &redeemed) != nil || !validID(redeemed.TokenID) || redeemed.Credential != redeemed.TokenID+"."+pair.Secret {
+	if json.Unmarshal(receipt, &redeemed) != nil || !validID(redeemed.TokenID) || redeemed.Credential != redeemed.TokenID+"."+pair.Secret {
 		die("Unexpected pairing receipt; pending evidence retained")
 	}
 	if _, err = secret("store", "credential", target, redeemed.Credential); err != nil {

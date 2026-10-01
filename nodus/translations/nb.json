@@ -6,7 +6,7 @@
     "heading": "Koble til notatene dine",
     "configure": "Legg inn adressen til Nodus-serveren i plugininnstillingene først.",
     "web": "Lag en kortvarig sammenkoblingskode i Nodus Web, og trykk Koble til enheten nedenfor.",
-    "terminal": "En terminal åpnes automatisk for sikker inntasting. Du trenger ikke skrive kommandoer; koden vises ikke.",
+    "terminal": "A terminal opens automatically. The code is visible as you type; lowercase letters are converted to uppercase.",
     "finish": "Notatene lastes automatisk etter sammenkobling. Hvis utfallet er ukjent, trykk Koble til enheten igjen med samme server for å gjenta forsøket.",
     "paired": "Denne enheten er allerede koblet til. Endring av serverinnstillingen erstatter ikke påloggingsdata eller flytter notater.",
     "enter_code": "Skriv sammenkoblingskoden i terminalen som nettopp åpnet seg.",

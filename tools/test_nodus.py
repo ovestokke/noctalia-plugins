@@ -107,8 +107,29 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("x86_64 and ARM64 only", json.loads(result.stdout)["message"])
 
-    def test_pairing_code_is_hidden_in_real_tty(self):
+    def test_pairing_code_is_visible_and_normalized(self):
+        self.pair_in_tty(["abcde-fghjk"])
+
+    def test_malformed_code_reprompts_without_network_request(self):
+        self.pair_in_tty(["wrong", "A" * 64, "abcde-fghjk"], invalid_inputs=2)
+
+    def test_rejected_code_reprompts(self):
+        for status in (400, 401):
+            with self.subTest(status=status):
+                self.pair_in_tty(["abcde-fghjk", "pqrst-uvwxy"], statuses=[status])
+
+    def test_previously_saved_bad_code_can_be_corrected(self):
+        self.pair_in_tty(["abcde-fghjk"], statuses=[400], saved_bad_code=True)
+
+    def test_uncertain_or_temporary_failure_preserves_exact_retry(self):
+        for status in (0, 429, 503, 409):
+            with self.subTest(status=status):
+                self.pair_in_tty(["abcde-fghjk"], statuses=[status], retry_retained=True)
+
+    def pair_in_tty(self, codes, statuses=(), invalid_inputs=0, saved_bad_code=False, retry_retained=False):
         # Fake keyring and loopback server only; never contact a real account.
+        # Each scenario has its own state and keyring, including subtests.
+        self.state = Path(tempfile.mkdtemp(dir=self.root, prefix="state-"))
         secret_tool = self.bin / "secret-tool"
         secret_tool.write_text(
             '#!/usr/bin/python3\n'
@@ -122,9 +143,11 @@ class BundleTests(unittest.TestCase):
             'else: sys.exit(1)\n'
         )
         secret_tool.chmod(0o755)
-        keyring = self.root / "keyring"
-        keyring.mkdir(mode=0o700)
+        keyring = Path(tempfile.mkdtemp(dir=self.root, prefix="keyring-"))
         self.env["FAKE_KEYRING"] = str(keyring)
+        previous = {"code": "wrong", "deviceId": "dev_old", "requestId": "req_old", "credentialSecret": "A" * 43}
+        if saved_bad_code:
+            (keyring / "pending").write_text(json.dumps(previous))
         requests = []
 
         class Handler(BaseHTTPRequestHandler):
@@ -134,6 +157,15 @@ class BundleTests(unittest.TestCase):
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 requests.append((self.path, body))
+                if len(requests) <= len(statuses):
+                    status = statuses[len(requests) - 1]
+                    if status == 0:
+                        self.close_connection = True  # Lost response: outcome unknown.
+                        return
+                    self.send_response(status)
+                    self.end_headers()
+                    self.wfile.write(b'{"code":"invalid_pairing"}' if status == 401 else b'{"error":"rejected"}')
+                    return
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(json.dumps({"tokenId": "token_test", "credential": "token_test." + body["credentialSecret"]}).encode())
@@ -153,7 +185,8 @@ class BundleTests(unittest.TestCase):
             os.execve("/bin/sh", ["/bin/sh", str(BUNDLE / "nodus-noctalia"), "--data-dir", str(self.state), "pair", origin], self.env)
         thread.start()
         output = b""
-        sent = False
+        submitted = 0
+        sent_at = None
         try:
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
@@ -166,14 +199,19 @@ class BundleTests(unittest.TestCase):
                 if not chunk:
                     break
                 output += chunk
-                if b"Pairing code: " in output and not sent:
-                    os.write(fd, b"ABCDE-FGHIJ\n")
-                    sent = True
+                if output.count(b"Pairing code: ") > submitted and sent_at is None:
+                    self.assertLess(submitted, len(codes), output)
+                    sent_at = len(output)
+                    os.write(fd, codes[submitted].encode())
+                if sent_at is not None and codes[submitted].encode() in output[sent_at:]:
+                    os.write(fd, b"\n")
+                    submitted += 1
+                    sent_at = None
             else:
                 self.fail("pairing timed out")
             child, status = os.waitpid(pid, 0)
             self.assertEqual(child, pid, output)
-            self.assertEqual(os.waitstatus_to_exitcode(status), 0, output)
+            self.assertEqual(os.waitstatus_to_exitcode(status), 1 if retry_retained else 0, output)
             pid = 0
         finally:
             os.close(fd)
@@ -183,17 +221,37 @@ class BundleTests(unittest.TestCase):
                     os.waitpid(pid, 0)
                 except ProcessLookupError:
                     pass
-        self.assertTrue(sent)
-        self.assertNotIn(b"ABCDE-FGHIJ", output)
+        server.shutdown()
+        thread.join()
+        # Restart only when exercising an exact retry without any TTY/code prompt.
+        if retry_retained:
+            retained = json.loads((keyring / "pending").read_text())
+            self.assertEqual(retained, requests[0][1])
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            retried = self.run_helper("pair", origin)
+            server.shutdown()
+            thread.join()
+            self.assertEqual(retried.returncode, 0, retried.stdout)
+            self.assertEqual(requests[0][1], requests[1][1])
+            self.assertNotIn("Pairing code:", retried.stdout + retried.stderr)
+            output += retried.stdout.encode()
+        self.assertEqual(submitted, len(codes))
         self.assertIn(b'"state":"paired"', output)
-        self.assertEqual(len(requests), 1)
-        self.assertEqual(requests[0][0], "/auth/pairings/redeem")
-        self.assertEqual(requests[0][1]["code"], "ABCDE-FGHIJ")
+        self.assertEqual(output.count(b"Incorrect code. Try again."), invalid_inputs + (0 if retry_retained else len(statuses)))
+        self.assertEqual(len(requests), 1 + len(statuses))
+        self.assertTrue(all(route == "/auth/pairings/redeem" for route, _ in requests))
+        self.assertEqual(requests[-1][1]["code"], codes[-1].upper())
+        if saved_bad_code:
+            self.assertEqual(requests[0][1], previous)
+        if statuses and not retry_retained:
+            for field in ("deviceId", "requestId", "credentialSecret"):
+                self.assertNotEqual(requests[0][1][field], requests[1][1][field])
         credential = (keyring / "credential").read_text()
         self.assertNotIn(credential.encode(), output)
         self.assertFalse((keyring / "pending").exists())
         for path in self.state.iterdir():
-            self.assertNotIn(b"ABCDE-FGHIJ", path.read_bytes())
+            self.assertNotIn(codes[-1].upper().encode(), path.read_bytes())
             self.assertNotIn(credential.encode(), path.read_bytes())
         self.assertEqual(json.loads((self.state / "profile.json").read_text())["origin"], origin)
 

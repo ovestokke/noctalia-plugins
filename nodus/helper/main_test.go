@@ -89,6 +89,19 @@ esac
 	}
 	return p, &calls
 }
+func TestNormalizePairingCode(t *testing.T) {
+	for _, input := range []string{"abcde-fghjk", "AbCdE-fGhJk", " ABCDE-FGHJK\t"} {
+		if code, ok := normalizePairingCode(input); !ok || code != "ABCDE-FGHJK" {
+			t.Errorf("did not normalize %q", input)
+		}
+	}
+	for _, input := range []string{"", "abcde", "abcdefghjk", "ABCDE-FGHIJ", "ABCDE-FGHJ0", "ABCDE-FGHJ1", "ABCDE-FGHJO", "ABCDE-FGHJK-extra"} {
+		if _, ok := normalizePairingCode(input); ok {
+			t.Errorf("accepted invalid code %q", input)
+		}
+	}
+}
+
 func TestFeedResumeAndCachedRead(t *testing.T) {
 	p, calls := setup(t)
 	syncNotes(0)

@@ -31,12 +31,12 @@ If `secret-tool` is missing, install it with `sudo pacman -Syu --needed libsecre
 1. Add this repository as a Noctalia plugin source (see the [repository install instructions](../README.md#install)). Install and enable **Nodus** from the catalog, then add its bar widget.
 2. Under **Settings → Plugins → Nodus**, set the server address, for example `https://nodus.vstokke.com`.
 3. In Nodus Web, create a short-lived pairing code.
-4. Open the Nodus panel and select **Pair device**. A terminal opens automatically. Enter the code there; it is hidden as you type. You do not need to type any commands.
+4. Open the Nodus panel and select **Pair device**. A terminal opens automatically. Enter the code there; it is visible as you type. Lowercase letters are converted to uppercase automatically. You do not need to type any commands.
 5. Notes load automatically after successful pairing. Press Enter to close the terminal. The panel's gear button returns to connection setup.
 
 If the source is already installed, update it through Noctalia to receive the bundled helper. A missing bundle is an installation error: update or reinstall the plugin, rather than installing Go.
 
-Pairing reads the code from `/dev/tty` with echo disabled because Noctalia's process API does not expose stdin. The code is never placed in plugin settings, process arguments or a plaintext input file. Only HTTPS origins are accepted outside loopback. The credential and pending redemption tuple live in Secret Service. If redemption has an unknown outcome, select **Pair device** again with the **same server address** to retry the original tuple. Changing the server setting does not replace an existing pairing.
+Pairing reads the code from `/dev/tty` with echo enabled because Noctalia's process API does not expose stdin. The short-lived code is visible in the terminal, so avoid sharing that terminal while pairing. The code is never placed in plugin settings, process arguments or a plaintext input file. Only HTTPS origins are accepted outside loopback. The credential and pending redemption tuple live in Secret Service. Incorrect or expired codes show **Incorrect code. Try again.** and prompt for another code in the same terminal. A rejected attempt is cleared; network failures and temporary errors retain the original attempt. If redemption has an unknown outcome, select **Pair device** again with the **same server address** to retry the original tuple. Changing the server setting does not replace an existing pairing.
 
 Existing helper profiles remain usable. No files in the separate Nodus CLI's private directory are imported, moved or modified.
 
@@ -86,4 +86,4 @@ noctalia plugins lint nodus
 python3 tools/smoke.py
 ```
 
-Tests use a fake Secret Service command and a disposable HTTP server. The bundle tests run the shipped helper without Go and exercise hidden code entry through a real pseudo-terminal. They do **not** test live pairing, a real unlocked keyring, or Noctalia's UI runtime; those require a local end-to-end check before release.
+Tests use a fake Secret Service command and a disposable HTTP server. The bundle tests run the shipped helper without Go and verify that code entry is visible before submission through a real pseudo-terminal. They do **not** test live pairing, a real unlocked keyring, or Noctalia's UI runtime; those require a local end-to-end check before release.

@@ -6,7 +6,7 @@
     "heading": "Connect your notes",
     "configure": "Set your Nodus server address in plugin settings first.",
     "web": "Create a short-lived pairing code in Nodus Web, then select Pair device below.",
-    "terminal": "A terminal opens automatically for secure code entry. No commands to type; the code stays hidden.",
+    "terminal": "A terminal opens automatically. The code is visible as you type; lowercase letters are converted to uppercase.",
     "finish": "Notes load automatically after pairing. If an attempt has an unknown outcome, use Pair device again with the same server to retry it.",
     "paired": "This device is already paired. Changing the server setting does not replace its credential or move its notes.",
     "enter_code": "Enter the pairing code in the terminal that just opened.",

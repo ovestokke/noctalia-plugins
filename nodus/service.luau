@@ -144,7 +144,7 @@ local function toggle(command)
   end)
 end
 
--- Noctalia's process API has no stdin channel. Launch the protected TTY prompt
+-- Noctalia's process API has no stdin channel. Launch the interactive TTY prompt
 -- instead of passing a pairing code through argv, settings or a plaintext file.
 local function shellQuote(value)
   return "'" .. string.gsub(value, "'", "'\\''") .. "'"
