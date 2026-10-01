@@ -42,6 +42,14 @@ Existing helper profiles remain usable. No files in the separate Nodus CLI's pri
 
 The helper uses `$XDG_STATE_HOME/nodus-noctalia` (or `~/.local/state/nodus-noctalia`) for a private 0700 profile, exact-write journal, drafts and full feed cache. These contain **unencrypted note content**, not credentials. The Go helper writes its state with file and directory sync. Noctalia passes note intent to the helper through a pre-created private 0600 draft file, not argv. Only the helper makes authenticated HTTP requests. If the keyring is unavailable, the plugin does not fall back to plaintext credentials.
 
+## Links
+
+Existing note bodies and checklist items recognize explicit `http://` and `https://` URLs. A URL-only label is clickable and wraps normally. Mixed text stays unchanged, with separate link actions below it. Link actions also work on completed items and do not toggle their checkboxes.
+
+Only deliberate activation opens the default browser through `xdg-open`. Destinations are validated again before opening; rendering does not fetch URLs or create previews. Bare domains, email addresses and other schemes remain plain text. Editing, stored text and synchronization are unchanged.
+
+This uses native Noctalia actions, not inline hyperlinks: the current plugin API has no inline-link callbacks, and its Markdown renderer discards link destinations. No new text-selection support is provided. Existing completed-item strikethrough styling is retained. Native action rows participate in Noctalia's keyboard navigation, but live keyboard/mouse dispatch and browser integration still need a desktop acceptance check.
+
 ## Settings
 
 `instance_url` is the Nodus server's HTTPS origin, with no path or query. Set it under **Settings → Plugins → Nodus** before pairing. It is used only for pairing; an existing profile retains its original server. Pairing codes and credentials are never saved in plugin settings.
@@ -82,8 +90,12 @@ go -C nodus/helper test -count=1 ./...
 go -C nodus/helper vet ./...
 python3 tools/build_nodus.py --check
 python3 tools/test_nodus.py
+python3 tools/test_nodus_links.py
+python3 tools/test_nodus_link_panel.py
 noctalia plugins lint nodus
 python3 tools/smoke.py
 ```
+
+Link fixture/action tests require Lua 5.3+; the actual panel integration test requires the Luau CLI. Both stub the browser opener and never contact fixture destinations. The shared contract (`docs/client-links.md`) and fixtures (`web/tests/fixtures/client-link-fixtures.json`) are copied from the canonical Nodus repository into `tools/fixtures/`; update them through the coordinating Nodus agent rather than changing the rules independently.
 
 Tests use a fake Secret Service command and a disposable HTTP server. The bundle tests run the shipped helper without Go and verify that code entry is visible before submission through a real pseudo-terminal. They do **not** test live pairing, a real unlocked keyring, or Noctalia's UI runtime; those require a local end-to-end check before release.

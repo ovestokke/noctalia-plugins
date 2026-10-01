@@ -1,5 +1,7 @@
 --!nonstrict
 
+local LinkView = require("./lib/link_view.luau")
+
 local connection = noctalia.state.get("connection") or { state = "loading" }
 local listing = noctalia.state.get("notes") or { items = {}, next = false, counts = {} }
 local selected = noctalia.state.get("selected")
@@ -379,7 +381,7 @@ local function checklistRow(item)
       tooltip = if checked then noctalia.tr("actions.uncheck") else noctalia.tr("actions.check"),
       enabled = connection.state == "connected" and selected.state == "live" and pendingToggleItemID == nil,
       onClick = function() markChecked(item) end }),
-    label,
+    LinkView.render(item.text or "", label),
   })
 end
 
@@ -414,8 +416,9 @@ local function detailView()
       if pendingToggleItemID ~= nil then table.insert(contents, ui.label({ text = noctalia.tr("status.checking"),
         fontSize = 11, color = "on_surface_variant" })) end
     else
-      table.insert(contents, ui.label({ text = if selected.text ~= "" then selected.text else noctalia.tr("notes.empty"),
-        fontSize = 14, color = "on_surface" }))
+      table.insert(contents, LinkView.render(selected.text or "", ui.label({
+        text = if selected.text ~= "" then selected.text else noctalia.tr("notes.empty"),
+        fontSize = 14, color = "on_surface", flexGrow = 1 })))
     end
   else
     table.insert(contents, ui.label({ text = if detailError ~= "" then detailError else noctalia.tr("status.loading"),
