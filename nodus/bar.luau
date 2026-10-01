@@ -2,17 +2,17 @@
 
 local connection = noctalia.state.get("connection") or { state = "loading" }
 local function render()
-  local color = if connection.state == "connected" then "primary" elseif connection.state == "loading" then "secondary" else "on_surface_variant"
-  local layout = if barWidget.isVertical() then ui.column else ui.row
-  barWidget.render(layout({ gap = 6, align = "center" }, {
-    ui.glyph({ name = "notes", size = 17, color = color }),
-    ui.label({ text = "Nodus", color = "on_surface" }),
-    ui.box({ width = 6, height = 6, radius = 3, fill = color }),
-  }))
-  barWidget.setTooltip("Nodus: " .. tostring(connection.state))
+  local icon = "assets/nodus-icon-grayscale.png"
+  if connection.state == "connected" then icon = "assets/nodus-icon.png" end
+  barWidget.setText("")
+  barWidget.setGlyph("")
+  barWidget.setImage(icon, false, 22, 22)
+  barWidget.setTooltip("Nodus: " .. tostring(connection.state) .. "\nClick to open notes")
 end
 noctalia.state.watch("connection", function(value)
-  if type(value) == "table" then connection = value; render() end
+  connection = { state = "loading" }
+  if type(value) == "table" then connection = value end
+  render()
 end)
 function update()
   noctalia.setUpdateInterval(60000)
