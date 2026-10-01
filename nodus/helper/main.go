@@ -141,7 +141,11 @@ func main() {
 		die("Cannot lock state")
 	}
 	defer lock.Close()
-	if err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
+	if err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			result(envelope{OK: false, State: "busy", Message: "Another Nodus operation is running; finish pairing if its terminal is open"})
+			os.Exit(1)
+		}
 		die("Cannot lock state")
 	}
 	switch flag.Arg(0) {
@@ -284,7 +288,7 @@ func remove(name string) error {
 func loadProfile() profile {
 	var p profile
 	if read("profile.json", &p) != nil || p.Origin == "" || !validID(p.TokenID) || !validID(p.DeviceID) || !validID(p.Realm) {
-		die("Pair this device in a terminal first")
+		die("Pair this device from the Nodus plugin first")
 	}
 	return p
 }

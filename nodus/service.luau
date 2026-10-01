@@ -1,6 +1,7 @@
 --!nonstrict
 
-local helper = noctalia.expandPath("~/.local/bin/nodus-noctalia")
+local pluginDir = noctalia.pluginDir()
+local helper = if pluginDir ~= nil then pluginDir .. "/bin/nodus-noctalia" else nil
 local busy = false
 local pending = nil
 local notes = {}
@@ -15,8 +16,20 @@ local function connection(state, message)
   noctalia.state.set("connection", { state = state, message = message or "" })
 end
 
+local function prerequisites()
+  if helper == nil or not noctalia.fileExists(helper) then
+    return "The bundled Nodus helper is missing; update or reinstall the plugin"
+  end
+  if not noctalia.commandExists("secret-tool") then
+    return "Install secret-tool (libsecret on Arch, libsecret-tools on Debian/Ubuntu) and unlock your desktop keyring"
+  end
+  return nil
+end
+
 local function run(args, done)
-  local argv = { helper }
+  local err = prerequisites()
+  if err ~= nil then done(nil, err); return end
+  local argv = { "/bin/sh", helper }
   for _, value in ipairs(args) do table.insert(argv, value) end
   local started = noctalia.runAsync(argv, function(result)
     if result.timedOut or result.stdoutTruncated then
@@ -27,12 +40,12 @@ local function run(args, done)
     if type(response) ~= "table" or type(response.ok) ~= "boolean" then
       done(nil, "The helper returned an invalid response")
     elseif not response.ok or result.exitCode ~= 0 then
-      done(nil, tostring(response.message or "Helper unavailable"))
+      done(nil, tostring(response.message or "Helper unavailable"), response.state)
     else
       done(response, nil)
     end
   end, 60000)
-  if not started then done(nil, "Install the Nodus helper, then refresh") end
+  if not started then done(nil, "Could not start the bundled Nodus helper; update or reinstall the plugin") end
 end
 
 local dispatch
@@ -48,9 +61,11 @@ end
 local function sync(offset)
   busy = true
   connection("loading")
-  run({ "sync", tostring(offset) }, function(response, err)
+  run({ "sync", tostring(offset) }, function(response, err, state)
     if response == nil then
-      connection(if string.find(err or "", "Pair this device", 1, true) then "unpaired" else "error", err)
+      connection(if state == "busy" then "busy"
+        elseif string.find(err or "", "Pair this device", 1, true) then "unpaired" else "error", err)
+      if state == "busy" then lastSync = tick - 25 end
     else
       if offset == 0 then notes = {} end
       for _, item in ipairs(response.notes or {}) do table.insert(notes, item) end
@@ -129,9 +144,37 @@ local function toggle(command)
   end)
 end
 
+-- Noctalia's process API has no stdin channel. Launch the protected TTY prompt
+-- instead of passing a pairing code through argv, settings or a plaintext file.
+local function shellQuote(value)
+  return "'" .. string.gsub(value, "'", "'\\''") .. "'"
+end
+
+local function pairDevice()
+  local err = prerequisites()
+  if err ~= nil then connection("error", err); return end
+  local target = noctalia.getConfig("instance_url")
+  if type(target) ~= "string" or noctalia.string.trim(target) == "" then
+    connection("unpaired", noctalia.tr("setup.configure"))
+    return
+  end
+  target = noctalia.string.trim(target)
+  -- All variable values are separate, quoted arguments to a fixed shell script.
+  local script = '/bin/sh "$1" pair "$2"; printf "\\n%s\\n" "$3"; read -r answer'
+  local cmd = "/bin/sh -c " .. shellQuote(script) .. " nodus-pair " .. shellQuote(helper)
+    .. " " .. shellQuote(target) .. " " .. shellQuote(noctalia.tr("setup.terminal_close"))
+  if not noctalia.runInTerminal(cmd) then
+    connection("unpaired", noctalia.tr("setup.no_terminal"))
+    return
+  end
+  connection("pairing", noctalia.tr("setup.enter_code"))
+  lastSync = tick - 29
+end
+
 dispatch = function(command)
   if busy then pending = command; return end
-  if command.action == "refresh" then if lastSync <= tick then sync(0) end
+  if command.action == "pair" then pairDevice()
+  elseif command.action == "refresh" then if lastSync <= tick then sync(0) end
   elseif command.action == "more" then if nextPage and lastSync <= tick then sync(#notes) end
   elseif command.action == "open" and type(command.id) == "string" then detail(command.id, command.fresh == true)
   elseif command.action == "create" and type(command.title) == "string" and type(command.text) == "string"

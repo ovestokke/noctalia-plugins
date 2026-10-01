@@ -1,0 +1,16 @@
+#!/bin/sh
+# Git-source installs include both binaries. Never use a helper from PATH.
+case "$(uname -s):$(uname -m)" in
+    Linux:x86_64) arch=amd64 ;;
+    Linux:aarch64|Linux:arm64) arch=arm64 ;;
+    *)
+        printf '%s\n' '{"ok":false,"state":"error","message":"Nodus supports Linux x86_64 and ARM64 only"}'
+        exit 1
+        ;;
+esac
+helper="$(dirname "$0")/nodus-noctalia-linux-$arch"
+if [ ! -x "$helper" ]; then
+    printf '%s\n' '{"ok":false,"state":"error","message":"The bundled Nodus helper is missing or not executable; update or reinstall the plugin"}'
+    exit 1
+fi
+exec "$helper" "$@"

@@ -8,6 +8,7 @@ local capture = noctalia.state.get("capture") or { state = "idle" }
 local detailError = ""
 local filter = "active"
 local composerOpen = false
+local setupOpen = false
 local composerKind = "text"
 local discardConfirm = false
 local titleDraft = ""
@@ -43,6 +44,8 @@ local function statusText()
   if connection.state == "conflict" then return noctalia.tr("status.conflict") end
   if connection.state == "loading" then return noctalia.tr("status.loading") end
   if connection.state == "unpaired" then return noctalia.tr("status.unpaired") end
+  if connection.state == "pairing" then return noctalia.tr("status.pairing") end
+  if connection.state == "busy" then return noctalia.tr("status.busy") end
   return noctalia.tr("status.error")
 end
 
@@ -66,6 +69,8 @@ local function header()
     ui.box({ width = 6, height = 6, radius = 3, fill = if healthy then "primary" else "on_surface_variant" }),
     ui.label({ text = if healthy then noctalia.tr("status.short_connected") else noctalia.tr("status.short_disconnected"),
       fontSize = 11, color = "on_surface_variant" }),
+    ui.button({ glyph = "settings", variant = "ghost", controlSize = "sm", tooltip = noctalia.tr("actions.connection"),
+      onClick = function() setupOpen = not setupOpen; render() end }),
     ui.button({ glyph = "refresh", variant = "ghost", controlSize = "sm", tooltip = noctalia.tr("actions.refresh"),
       onClick = function() command("refresh") end }),
     ui.button({ glyph = "x", variant = "ghost", controlSize = "sm", tooltip = noctalia.tr("actions.close"),
@@ -307,17 +312,27 @@ local function notesList()
 end
 
 local function setupView()
+  local origin = noctalia.getConfig("instance_url") or ""
+  local paired = connection.state == "connected" or connection.state == "offline"
+  local waiting = connection.state == "pairing" or connection.state == "busy"
   return ui.column({ flexGrow = 1, gap = 13, padding = 16 }, {
     ui.glyph({ name = "shield-lock", size = 28, color = "primary" }),
     ui.label({ text = noctalia.tr("setup.heading"), fontSize = 20, fontWeight = "semibold", color = "on_surface" }),
-    ui.label({ text = noctalia.tr("setup.web"), color = "on_surface_variant" }),
-    ui.label({ text = noctalia.tr("setup.terminal"), color = "on_surface_variant" }),
-    ui.label({ text = noctalia.tr("setup.finish"), color = "on_surface_variant" }),
+    ui.label({ text = if origin ~= "" then origin else noctalia.tr("setup.configure"), color = "on_surface_variant" }),
+    ui.button({ text = noctalia.tr("actions.server_settings"), variant = "outline",
+      onClick = function() noctalia.openSettings() end }),
+    ui.label({ text = noctalia.tr(if paired then "setup.paired" else "setup.web"), color = "on_surface_variant" }),
+    ui.label({ visible = not paired, text = noctalia.tr("setup.terminal"), color = "on_surface_variant" }),
+    ui.button({ visible = not paired, text = noctalia.tr("actions.pair"), glyph = "link", variant = "primary",
+      enabled = origin ~= "" and not waiting, onClick = function() command("pair") end }),
+    ui.label({ visible = not paired, text = noctalia.tr("setup.finish"), color = "on_surface_variant" }),
+    ui.button({ visible = setupOpen, text = noctalia.tr("actions.back"), variant = "ghost",
+      onClick = function() setupOpen = false; render() end }),
   })
 end
 
 local function listView()
-  if connection.state == "unpaired" then return setupView() end
+  if connection.state == "unpaired" or connection.state == "pairing" or connection.state == "busy" then return setupView() end
   return ui.column({ flexGrow = 1, gap = 14 }, {
     composer(),
     tabs(),
@@ -432,11 +447,18 @@ render = function()
       color = if capture.state == "error" then "error" else "primary", maxLines = 3 }),
     ui.button({ visible = connection.state == "unknown", text = noctalia.tr("actions.retry"), variant = "outline",
       onClick = function() command("retry") end }),
-    if selectedID ~= nil then detailView() elseif composerOpen then editorView() else listView(),
+    if setupOpen then setupView() elseif selectedID ~= nil then detailView() elseif composerOpen then editorView() else listView(),
   }))
 end
 
-noctalia.state.watch("connection", function(value) if type(value) == "table" then connection = value; render() end end)
+noctalia.state.watch("connection", function(value)
+  if type(value) ~= "table" then return end
+  if value.state == "connected" and (connection.state == "pairing" or connection.state == "busy" or connection.state == "unpaired") then
+    setupOpen = false
+  end
+  connection = value
+  render()
+end)
 noctalia.state.watch("notes", function(value) if type(value) == "table" then listing = value; render() end end)
 noctalia.state.watch("selected", function(value)
   if type(value) ~= "table" then return end

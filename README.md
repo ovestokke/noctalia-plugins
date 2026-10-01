@@ -7,7 +7,7 @@ Noctalia v5 plugins maintained by Ove Stokke.
 | Plugin | Description |
 | --- | --- |
 | [`ovestokke/memos`](memos/) | Capture private Memos notes, browse recent notes, and receive synchronized reminders. |
-| [`ovestokke/nodus`](nodus/) | Experimental Linux client for Nodus notes and checklists. Requires a separately built helper; not production-ready. |
+| [`ovestokke/nodus`](nodus/) | Experimental Linux client for Nodus notes and checklists. Includes its helper for x86_64 and ARM64; not production-ready. |
 
 ## Install
 
@@ -27,7 +27,9 @@ Noctalia updates custom git sources automatically when plugin auto-updates are e
 noctalia msg plugins update ovestokke
 ```
 
-See [`memos/README.md`](memos/README.md) for configuration, security details, tests, and current limitations.
+To use Nodus, enable `ovestokke/nodus` from the same catalog and add its bar widget. Set the server under **Settings → Plugins → Nodus**, then select **Pair device** in its panel. No clone, Go installation or helper build is needed.
+
+See [`memos/README.md`](memos/README.md) and [`nodus/README.md`](nodus/README.md) for setup, security details, tests, and current limitations.
 
 ## Local development
 
@@ -36,7 +38,7 @@ Add the repository root as a path source:
 ```sh
 noctalia msg plugins source add ovestokke-dev path /path/to/noctalia-plugins
 noctalia msg plugins enable ovestokke/memos
-# After building and pairing the Nodus helper (see nodus/README.md):
+# Nodus uses its bundled helper; pair through the plugin panel:
 noctalia msg plugins enable ovestokke/nodus
 ```
 

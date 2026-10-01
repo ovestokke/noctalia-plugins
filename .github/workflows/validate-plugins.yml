@@ -26,3 +26,21 @@ jobs:
 
       - name: Validate plugin manifests
         run: python3 .github/workflows/validate-plugins.py
+
+      - name: Set up Go for Nodus development checks
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: nodus/helper/toolchain.txt
+          cache: false
+
+      - name: Test Nodus helper
+        working-directory: nodus/helper
+        run: |
+          go test -count=1 ./...
+          go vet ./...
+
+      - name: Verify bundled helpers match their source
+        run: python3 tools/build_nodus.py --check
+
+      - name: Test Nodus plugin distribution
+        run: python3 tools/test_nodus.py

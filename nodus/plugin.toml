@@ -1,6 +1,6 @@
 id = "ovestokke/nodus"
 name = "Nodus"
-version = "0.1.0"
+version = "0.2.0"
 plugin_api = 24
 author = "ovestokke"
 license = "MIT"
@@ -8,6 +8,13 @@ dependencies = []
 tags = ["bar", "panel", "productivity", "service"]
 icon = "notes"
 description = "Read and capture Nodus notes from Noctalia."
+
+[[setting]]
+key = "instance_url"
+type = "string"
+label_key = "settings.instance_url.label"
+description_key = "settings.instance_url.description"
+default = ""
 
 [[widget]]
 id = "bar"
