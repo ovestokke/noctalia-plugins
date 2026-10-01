@@ -1,6 +1,6 @@
 id = "ovestokke/nodus"
 name = "Nodus"
-version = "0.2.2"
+version = "0.2.3"
 plugin_api = 24
 author = "ovestokke"
 license = "MIT"

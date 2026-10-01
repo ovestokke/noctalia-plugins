@@ -1,12 +1,19 @@
 --!nonstrict
 
 local connection = noctalia.state.get("connection") or { state = "loading" }
+local currentIcon = nil
 local function render()
-  local icon = "assets/nodus-icon-grayscale.png"
-  if connection.state == "connected" then icon = "assets/nodus-icon.png" end
-  barWidget.setText("")
-  barWidget.setGlyph("")
-  barWidget.setImage(icon, false, 22, 22)
+  local stem = "assets/nodus-icon-grayscale"
+  if connection.state == "connected" then stem = "assets/nodus-icon" end
+  local theme = "light"
+  if noctalia.isDarkMode() then theme = "dark" end
+  local icon = stem .. "-" .. theme .. ".png"
+  if icon ~= currentIcon then
+    barWidget.setText("")
+    barWidget.setGlyph("")
+    barWidget.setImage(icon, false, 22, 22)
+    currentIcon = icon
+  end
   barWidget.setTooltip("Nodus: " .. tostring(connection.state) .. "\nClick to open notes")
 end
 noctalia.state.watch("connection", function(value)
@@ -15,7 +22,8 @@ noctalia.state.watch("connection", function(value)
   render()
 end)
 function update()
-  noctalia.setUpdateInterval(60000)
+  -- Also follow theme changes while the connection state stays unchanged.
+  noctalia.setUpdateInterval(1000)
   render()
 end
 function onClick()
